@@ -1,0 +1,210 @@
+/* =====================================================================
+   Alejandria MakeUp — Sistema de diseno
+   Ubicacion: frontend/src/estilos/tokens.css
+
+   REGLA GENERAL
+   Ningun componente escribe un color, un tamano de letra, un radio o una
+   duracion literal. Todo sale de estas variables. Si algo hace falta y no
+   esta aqui, se agrega aqui primero.
+
+   POR QUE LOS ROSAS NO LLEVAN TEXTO BLANCO
+   Los cuatro colores de la marca son pasteles claros. Medidos contra
+   blanco dan entre 1.16 y 1.87 de contraste, cuando el minimo legible es
+   4.5. Texto blanco sobre cualquiera de ellos es ilegible. Texto oscuro
+   sobre ellos da entre 11 y 18, que es excelente.
+
+   POR QUE LOS ROSAS NO CODIFICAN ESTADOS
+   Entre si tienen entre 1.11 y 1.61 de separacion: a un metro de la
+   pantalla son el mismo color. No sirven para distinguir "stock bajo" de
+   "stock normal". Para eso estan los semanticos.
+   ===================================================================== */
+
+:root {
+
+  /* -------------------------------------------------------------------
+     MARCA — paleta original. Solo fondos, acentos y superficies de
+     identidad. Nunca texto, nunca estado.
+     ------------------------------------------------------------------- */
+  --marca-rosa-fuerte: #F0A8D0;
+  --marca-rosa:        #F7B5CA;
+  --marca-salmon:      #FFC6C6;
+  --marca-crema:       #FFEBD4;
+
+  /* -------------------------------------------------------------------
+     ACCION — el rosa de la marca llevado a saturacion para que aguante
+     texto claro. 5.87 contra blanco. Es el UNICO color de accion del
+     sistema: si algo es de este color, se puede pulsar; si se puede
+     pulsar, es de este color. Esa equivalencia es lo que hace que la
+     interfaz se lea sin pensar.
+     ------------------------------------------------------------------- */
+  --accion:          #C2185B;
+  --accion-hover:    #A81450;
+  --accion-activo:   #8E1043;
+  --accion-suave:    #FCE4EC;  /* fondo de estado seleccionado */
+  --accion-texto:    #FFFFFF;
+
+  /* -------------------------------------------------------------------
+     SUPERFICIES — las areas de trabajo son neutras. Ocho horas de
+     pantalla rosa saturado cansan la vista y tapan lo que importa.
+     ------------------------------------------------------------------- */
+  --fondo:            #FFFFFF;
+  --fondo-alterno:    #FDF9FA;  /* filas alternas de tabla, muy tenue */
+  --fondo-hundido:    #F7F3F4;  /* zonas secundarias, barras laterales */
+  --fondo-identidad:  #FFEBD4;  /* encabezado y pantallas de marca */
+  --superficie-alta:  #FFFFFF;  /* tarjetas y modales sobre el fondo */
+
+  /* -------------------------------------------------------------------
+     TEXTO — ciruela oscuro en vez de negro puro. Armoniza con los rosas
+     y reduce el deslumbramiento sobre fondo blanco.
+     ------------------------------------------------------------------- */
+  --texto:            #2E1B2B;  /* 16.06 sobre blanco */
+  --texto-secundario: #6B5563;  /*  6.76 sobre blanco */
+  --texto-tenue:      #8A7280;  /*  4.38 — solo etiquetas, nunca datos */
+  --texto-sobre-marca:#2E1B2B;  /* obligatorio sobre los cuatro rosas */
+
+  /* -------------------------------------------------------------------
+     SEMANTICOS — todos verificados sobre blanco por encima de 4.5.
+     Estos si comunican estado. Los rosas no.
+     ------------------------------------------------------------------- */
+  --error:          #B3261E;   /* 6.54 */
+  --error-fondo:    #FDECEA;
+  --exito:          #1E6B4F;   /* 6.42 */
+  --exito-fondo:    #E8F5EF;
+  --alerta:         #8A5A00;   /* 5.93 — stock bajo, vencimiento cercano */
+  --alerta-fondo:   #FFF6E5;
+  --info:           #1A5B8A;
+  --info-fondo:     #E9F2F8;
+
+  /* Diferencia de caja: no es error ni exito, es un hecho a revisar. */
+  --diferencia-favor:   var(--exito);
+  --diferencia-contra:  var(--error);
+
+  /* -------------------------------------------------------------------
+     BORDES Y SEPARADORES
+     Un separador organiza, no decora. Filo fino y bajo contraste: si se
+     nota mas que el contenido que separa, esta mal.
+     ------------------------------------------------------------------- */
+  --borde:         #EAE2E5;
+  --borde-fuerte:  #D5C8CD;  /* solo campos de formulario y tablas */
+  --borde-foco:    var(--accion);
+  --separador:     1px solid var(--borde);
+
+  /* -------------------------------------------------------------------
+     TIPOGRAFIA
+     Las fuentes se EMPAQUETAN con la app, no se traen de un CDN. Es una
+     app de escritorio en una tienda: el dia que se caiga el internet, una
+     fuente remota no carga y todo el sistema pasa a Times New Roman.
+     Los archivos .woff2 van en frontend/src/estilos/fuentes/.
+
+     Los montos van en monoespaciada con cifras tabulares para que las
+     columnas de pesos queden alineadas por unidad. En un sistema donde
+     todo es plata, eso no es estetica: es poder comparar de un vistazo.
+     ------------------------------------------------------------------- */
+  --fuente-ui:     'Source Sans 3', system-ui, sans-serif;
+  --fuente-monto:  'IBM Plex Mono', ui-monospace, monospace;
+  --cifras:        tabular-nums lining-nums;
+
+  --texto-xs:   0.75rem;   /* 12px — etiquetas de campo */
+  --texto-sm:   0.875rem;  /* 14px — texto secundario, celdas densas */
+  --texto-base: 1rem;      /* 16px — cuerpo, minimo para datos */
+  --texto-lg:   1.125rem;  /* 18px — titulos de seccion */
+  --texto-xl:   1.5rem;    /* 24px — titulo de pantalla */
+  --texto-2xl:  2rem;      /* 32px — total a cobrar, efectivo contado */
+  --texto-3xl:  2.75rem;   /* 44px — el total en la pantalla de venta */
+
+  --peso-normal:  400;
+  --peso-medio:   500;
+  --peso-fuerte:  600;
+
+  --interlinea-apretada: 1.25;
+  --interlinea:          1.5;
+
+  /* -------------------------------------------------------------------
+     ESPACIADO — escala de 4px
+     ------------------------------------------------------------------- */
+  --e-1:  0.25rem;
+  --e-2:  0.5rem;
+  --e-3:  0.75rem;
+  --e-4:  1rem;
+  --e-6:  1.5rem;
+  --e-8:  2rem;
+  --e-12: 3rem;
+
+  /* -------------------------------------------------------------------
+     DENSIDAD
+     Compacta = raton y teclado. Comoda = pantalla tactil, con 44px de
+     objetivo minimo. Se cambia poniendo data-densidad="comoda" en el
+     elemento raiz; ningun componente decide esto por su cuenta.
+     ------------------------------------------------------------------- */
+  --alto-control:   2rem;    /* 32px */
+  --alto-fila:      2.25rem; /* 36px */
+  --objetivo-min:   2rem;
+
+  /* -------------------------------------------------------------------
+     RADIOS Y SOMBRAS
+     Sombras muy tenues y tenidas de ciruela, no de negro: una sombra gris
+     sobre una paleta calida se ve sucia.
+     ------------------------------------------------------------------- */
+  --radio-sm:  4px;
+  --radio:     8px;
+  --radio-lg:  12px;
+  --radio-completo: 999px;
+
+  --sombra-sm: 0 1px 2px rgba(46, 27, 43, 0.06);
+  --sombra:    0 2px 8px rgba(46, 27, 43, 0.08);
+  --sombra-lg: 0 8px 24px rgba(46, 27, 43, 0.12);
+
+  /* -------------------------------------------------------------------
+     MOVIMIENTO
+     Esto es un punto de venta, no una pagina de presentacion. Cada
+     animacion se paga cientos de veces al dia: 300ms en cada cambio de
+     pantalla son cuatro minutos perdidos en mil operaciones, y sobre todo
+     es la sensacion de que el sistema va lento.
+
+     Regla: la animacion confirma que algo paso, nunca retrasa lo que el
+     usuario pidio. Nada por encima de 240ms. Nada animado en el camino
+     critico de cobrar.
+     ------------------------------------------------------------------- */
+  --mov-instantaneo: 100ms;  /* hover, pulsacion, foco */
+  --mov-rapido:      160ms;  /* desplegables, avisos, filas que entran */
+  --mov-medio:       240ms;  /* modales, paneles laterales */
+
+  --curva:         cubic-bezier(0.2, 0, 0, 1);      /* desacelera: responde */
+  --curva-entrada: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Densidad comoda para pantalla tactil */
+[data-densidad="comoda"] {
+  --alto-control: 2.75rem;  /* 44px */
+  --alto-fila:    3rem;
+  --objetivo-min: 2.75rem;
+  --texto-sm:     1rem;
+}
+
+/* Foco visible siempre. En una caja registradora se trabaja con teclado
+   mucho mas de lo que se cree. */
+:focus-visible {
+  outline: 2px solid var(--borde-foco);
+  outline-offset: 2px;
+}
+
+/* Quien pidio menos movimiento en su sistema operativo, lo recibe. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --mov-instantaneo: 0ms;
+    --mov-rapido:      0ms;
+    --mov-medio:       0ms;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Los montos siempre con cifras tabulares. Aplicar esta clase a toda
+   celda o campo que muestre pesos. */
+.monto {
+  font-family: var(--fuente-monto);
+  font-variant-numeric: var(--cifras);
+  font-weight: var(--peso-medio);
+}

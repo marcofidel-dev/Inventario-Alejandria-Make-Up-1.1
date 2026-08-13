@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: pos
+  datasource:
+    url: jdbc:sqlite:${APP_DB_PATH}?foreign_keys=on&journal_mode=WAL&busy_timeout=5000
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 1
+      # Con una sola conexión, pedir una segunda dentro de una transacción es un
+      # bug de programación, no una espera legítima: nadie va a liberar nada. El
+      # timeout por defecto son 30 s de cuelgue silencioso; 3 s hacen que
+      # reviente rápido y con mensaje. El leak detection avisa del método que
+      # retuvo la conexión más de 10 s, que es quien la está acaparando.
+      connection-timeout: 3000
+      leak-detection-threshold: 10000
+  jpa:
+    open-in-view: false
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+server:
+  port: 8080
+
+app:
+  launcher:
+    enabled: true
+
+logging:
+  level:
+    com.alejandriamakeup: INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+app:
+  launcher:
+    enabled: false
+
+logging:
+  level:
+    com.alejandriamakeup: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+
+app:
+  launcher:
+    enabled: false

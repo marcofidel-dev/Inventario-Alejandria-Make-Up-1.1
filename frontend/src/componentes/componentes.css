@@ -1,0 +1,309 @@
+/* =====================================================================
+   Componentes compartidos. Todo valor viene de tokens.css.
+   ===================================================================== */
+
+/* ------------------------------------------------------------------ Boton */
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--e-2);
+  min-height: var(--alto-control);
+  min-width: var(--objetivo-min);
+  padding: 0 var(--e-4);
+  border: var(--separador);
+  border-radius: var(--radio);
+  background: var(--fondo);
+  color: var(--texto);
+  font-weight: var(--peso-medio);
+  transition: background var(--mov-instantaneo) var(--curva),
+              border-color var(--mov-instantaneo) var(--curva);
+}
+
+.boton:hover:not(:disabled) { background: var(--fondo-hundido); }
+.boton:active:not(:disabled) { background: var(--borde); }
+.boton:disabled { opacity: 0.5; }
+
+/* El unico color de accion del sistema: si es de este color, se puede pulsar. */
+.boton--principal {
+  background: var(--accion);
+  border-color: var(--accion);
+  color: var(--accion-texto);
+}
+.boton--principal:hover:not(:disabled) {
+  background: var(--accion-hover);
+  border-color: var(--accion-hover);
+}
+.boton--principal:active:not(:disabled) {
+  background: var(--accion-activo);
+  border-color: var(--accion-activo);
+}
+
+.boton--peligro { color: var(--error); border-color: var(--error); }
+.boton--peligro:hover:not(:disabled) { background: var(--error-fondo); }
+
+.boton--plano { border-color: transparent; background: transparent; }
+.boton--plano:hover:not(:disabled) { background: var(--fondo-hundido); }
+
+/* ------------------------------------------------------------------ Campo */
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+}
+
+.campo__etiqueta {
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-medio);
+  color: var(--texto-secundario);
+}
+
+.campo__control {
+  min-height: var(--alto-control);
+  padding: 0 var(--e-3);
+  border: var(--separador-fuerte);
+  border-radius: var(--radio-sm);
+  background: var(--fondo);
+  transition: border-color var(--mov-instantaneo) var(--curva);
+}
+
+.campo__control:hover:not(:disabled) { border-color: var(--texto-tenue); }
+.campo__control:disabled { background: var(--fondo-hundido); color: var(--texto-tenue); }
+
+.campo__control--invalido { border-color: var(--error); }
+
+.campo__error {
+  font-size: var(--texto-xs);
+  color: var(--error);
+}
+
+.campo__ayuda {
+  font-size: var(--texto-xs);
+  color: var(--texto-tenue);
+}
+
+/* ------------------------------------------------------------------ Aviso */
+
+.aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e-3);
+  padding: var(--e-3) var(--e-4);
+  border-radius: var(--radio);
+  font-size: var(--texto-sm);
+  animation: aviso-entra var(--mov-rapido) var(--curva-entrada);
+}
+
+@keyframes aviso-entra {
+  from { opacity: 0; transform: translateY(calc(-1 * var(--e-1))); }
+  to   { opacity: 1; transform: none; }
+}
+
+.aviso__icono { flex: none; margin-top: var(--e-1); }
+.aviso__cuerpo { display: flex; flex-direction: column; gap: var(--e-1); }
+.aviso__detalles { margin: 0; padding-left: var(--e-4); }
+
+.aviso--error   { background: var(--error-fondo);  color: var(--error); }
+.aviso--exito   { background: var(--exito-fondo);  color: var(--exito); }
+.aviso--alerta  { background: var(--alerta-fondo); color: var(--alerta); }
+.aviso--info    { background: var(--info-fondo);   color: var(--info); }
+
+/* -------------------------------------------------------------- Insignia */
+
+.insignia {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-1);
+  padding: 0 var(--e-2);
+  border-radius: var(--radio-completo);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-medio);
+  white-space: nowrap;
+}
+
+.insignia--alerta { background: var(--alerta-fondo); color: var(--alerta); }
+.insignia--error  { background: var(--error-fondo);  color: var(--error); }
+.insignia--exito  { background: var(--exito-fondo);  color: var(--exito); }
+.insignia--neutra { background: var(--fondo-hundido); color: var(--texto-secundario); }
+
+/* ------------------------------------------------------------------ Tabla */
+
+.tabla-envoltura {
+  border: var(--separador);
+  border-radius: var(--radio);
+  overflow: auto;
+  background: var(--fondo);
+}
+
+.tabla th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: var(--alto-fila);
+  padding: 0 var(--e-3);
+  text-align: left;
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-fuerte);
+  color: var(--texto-secundario);
+  background: var(--fondo-hundido);
+  border-bottom: var(--separador-fuerte);
+  white-space: nowrap;
+}
+
+.tabla td {
+  height: var(--alto-fila);
+  padding: 0 var(--e-3);
+  border-bottom: var(--separador);
+  font-size: var(--texto-sm);
+}
+
+.tabla tbody tr:nth-child(even) { background: var(--fondo-alterno); }
+.tabla tbody tr:hover { background: var(--fondo-hundido); }
+.tabla tbody tr[aria-selected='true'] { background: var(--accion-suave); }
+
+.tabla .numero { text-align: right; }
+.tabla .inactiva { color: var(--texto-tenue); }
+
+/* Una fila que pide que la miren antes de confirmar. El fondo semantico, nunca
+   un rosa de marca: entre si los rosas se separan 1.11 y a un metro de la
+   pantalla no distinguen un aviso de una fila cualquiera. */
+.tabla .fila--alerta,
+.tabla tbody tr.fila--alerta:nth-child(even) { background: var(--alerta-fondo); }
+
+.fila__acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--e-2);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ Modal */
+
+.modal-fondo {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--e-4);
+  background: var(--velo-modal);
+  animation: modal-fondo-entra var(--mov-rapido) var(--curva-entrada);
+  z-index: 10;
+}
+
+.modal {
+  width: 100%;
+  max-width: var(--ancho-modal);
+  max-height: 90%;
+  overflow: auto;
+  padding: var(--e-6);
+  border-radius: var(--radio-lg);
+  background: var(--superficie-alta);
+  box-shadow: var(--sombra-lg);
+  animation: modal-entra var(--mov-medio) var(--curva-entrada);
+}
+
+@keyframes modal-fondo-entra {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modal-entra {
+  from { opacity: 0; transform: translateY(var(--e-2)); }
+  to   { opacity: 1; transform: none; }
+}
+
+.modal__titulo {
+  margin-bottom: var(--e-4);
+}
+
+.modal__acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--e-2);
+  margin-top: var(--e-6);
+}
+
+/* ------------------------------------------------------- Estado vacio */
+
+.estado-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e-3);
+  padding: var(--e-12) var(--e-6);
+  text-align: center;
+  color: var(--texto-secundario);
+}
+
+.estado-vacio__icono { color: var(--texto-tenue); }
+.estado-vacio__titulo { color: var(--texto); }
+.estado-vacio__acciones { display: flex; gap: var(--e-2); margin-top: var(--e-2); }
+
+
+/* ------------------------------------------------ Selector con alta */
+
+.selector-con-alta {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--e-2);
+}
+
+.selector-con-alta .campo { flex: 1; }
+
+
+/* --------------------------------------------- Buscador de variante */
+
+.buscador { position: relative; }
+
+/* Lo que ya se eligio, debajo del campo: el input se vacia al elegir para poder
+   buscar otra cosa, asi que sin esto la linea no diria que producto tiene. */
+.buscador__elegida {
+  margin-top: var(--e-1);
+  font-size: var(--texto-xs);
+  color: var(--texto-secundario);
+}
+
+.buscador__lista {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  margin-top: var(--e-1);
+  /* Ocho filas, que es el maximo de sugerencias: mas abajo no cabe en pantalla
+     con el teclado abierto y nadie lee la novena. */
+  max-height: calc(var(--alto-fila) * 8);
+  overflow-y: auto;
+  padding: var(--e-1);
+  list-style: none;
+  border-radius: var(--radio);
+  background: var(--superficie-alta);
+  box-shadow: var(--sombra);
+}
+
+.buscador__opcion {
+  display: block;
+  width: 100%;
+  min-height: var(--objetivo-min);
+  padding: var(--e-2) var(--e-3);
+  border: none;
+  border-radius: var(--radio-sm);
+  background: transparent;
+  color: var(--texto);
+  font-family: var(--fuente-ui);
+  font-size: var(--texto-sm);
+  text-align: left;
+}
+
+.buscador__opcion:hover,
+.buscador__opcion[aria-selected='true'] {
+  background: var(--accion-suave);
+  color: var(--accion);
+}
+
+.buscador__vacio {
+  margin-top: var(--e-1);
+  font-size: var(--texto-xs);
+  color: var(--texto-secundario);
+}

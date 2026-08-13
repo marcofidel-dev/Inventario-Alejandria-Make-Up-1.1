@@ -1,0 +1,301 @@
+/* =====================================================================
+   Pantallas. Todo valor viene de tokens.css.
+   ===================================================================== */
+
+/* ------------------------------------------------------------------ Login */
+
+.login {
+  display: grid;
+  place-items: center;
+  min-height: 100%;
+  padding: var(--e-6);
+  /* El rosa vive en la identidad: esta es una pantalla de marca. */
+  background: var(--fondo-identidad);
+  color: var(--texto-sobre-marca);
+}
+
+.login__caja {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e-4);
+  width: 100%;
+  max-width: var(--ancho-formulario);
+  padding: var(--e-8) var(--e-6);
+  border-radius: var(--radio-lg);
+  background: var(--superficie-alta);
+  box-shadow: var(--sombra);
+  color: var(--texto);
+}
+
+.login__titulo { text-align: center; }
+
+.login__perfiles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--e-3);
+}
+
+.login__nombre {
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-fuerte);
+}
+
+.login__casillas {
+  display: flex;
+  gap: var(--e-3);
+}
+
+.login__casilla {
+  width: var(--e-3);
+  height: var(--e-3);
+  border: var(--separador-fuerte);
+  border-radius: var(--radio-completo);
+  transition: background var(--mov-instantaneo) var(--curva);
+}
+
+.login__casilla--llena {
+  background: var(--accion);
+  border-color: var(--accion);
+}
+
+.login__cuenta-regresiva {
+  display: block;
+  margin-top: var(--e-2);
+  font-size: var(--texto-2xl);
+  line-height: var(--interlinea-apretada);
+}
+
+.login__numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--e-2);
+  width: 100%;
+  max-width: var(--ancho-numpad);
+}
+
+.login__numpad .boton { min-height: var(--e-8); }
+
+/* ---------------------------------------------------------------- Armazon */
+
+.armazon {
+  display: grid;
+  grid-template-columns: var(--ancho-navegacion) 1fr;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+}
+
+.encabezado {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-4);
+  padding: var(--e-3) var(--e-4);
+  /* Superficie de identidad: texto oscuro obligatorio sobre los rosas. */
+  background: var(--fondo-identidad);
+  color: var(--texto-sobre-marca);
+  border-bottom: var(--separador);
+}
+
+.encabezado__marca {
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-fuerte);
+}
+
+.encabezado__usuario {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  font-size: var(--texto-sm);
+}
+
+.navegacion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  padding: var(--e-3);
+  background: var(--fondo-hundido);
+  border-right: var(--separador);
+  overflow-y: auto;
+}
+
+.navegacion__item {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  min-height: var(--objetivo-min);
+  padding: var(--e-2) var(--e-3);
+  border: none;
+  border-radius: var(--radio);
+  background: transparent;
+  color: var(--texto-secundario);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  text-align: left;
+  transition: background var(--mov-instantaneo) var(--curva);
+}
+
+.navegacion__item:hover { background: var(--borde); }
+
+.navegacion__item[aria-current='page'] {
+  background: var(--accion-suave);
+  color: var(--accion);
+}
+
+/* Lo que todavia no existe se muestra apagado y sin reaccionar al puntero: la
+   estructura queda a la vista sin prometer una pantalla que no esta. */
+.navegacion__item:disabled,
+.pestanas__item:disabled {
+  color: var(--texto-tenue);
+  cursor: default;
+}
+
+.navegacion__item:disabled:hover { background: transparent; }
+
+.navegacion__pronto {
+  margin-left: auto;
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-normal);
+  color: var(--texto-tenue);
+}
+
+.pestanas {
+  display: flex;
+  gap: var(--e-1);
+  margin-bottom: var(--e-4);
+  border-bottom: var(--separador);
+}
+
+.pestanas__item {
+  min-height: var(--objetivo-min);
+  padding: var(--e-2) var(--e-3);
+  border: none;
+  /* El subrayado va siempre presente y transparente: si apareciera solo en la
+     pestaña activa, el texto se correria al cambiar de pestaña. El grosor sale
+     del token de separador, no de un valor escrito aqui. */
+  border-bottom: var(--separador-fuerte);
+  border-bottom-color: transparent;
+  background: transparent;
+  color: var(--texto-secundario);
+  font-family: var(--fuente-ui);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  transition: color var(--mov-instantaneo) var(--curva);
+}
+
+.pestanas__item:hover:not(:disabled) { color: var(--texto); }
+
+.pestanas__item[aria-selected='true'] {
+  color: var(--accion);
+  border-bottom-color: var(--accion);
+}
+
+.contenido {
+  padding: var(--e-6);
+  overflow: auto;
+  background: var(--fondo);
+}
+
+/* -------------------------------------------------------------- Catalogo */
+
+.pantalla__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-4);
+  margin-bottom: var(--e-4);
+}
+
+.pantalla__acciones { display: flex; gap: var(--e-2); }
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--e-3);
+  margin-bottom: var(--e-4);
+}
+
+.filtros__buscador { flex: 1; min-width: var(--ancho-formulario); }
+
+.filtros__interruptor {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  min-height: var(--alto-control);
+  font-size: var(--texto-sm);
+}
+
+.resumen-listado {
+  margin-bottom: var(--e-2);
+  font-size: var(--texto-xs);
+  color: var(--texto-tenue);
+}
+
+/* -------------------------------------------------------- Carga inicial */
+
+.carga__tabla td { vertical-align: middle; }
+
+.carga__pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-4);
+  margin-top: var(--e-4);
+}
+
+.carga__pista {
+  font-size: var(--texto-xs);
+  color: var(--texto-tenue);
+}
+
+.carga__celda-numero .campo__control { text-align: right; }
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+}
+
+.formulario__pareja {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--e-3);
+}
+
+.formulario--angosto { max-width: var(--ancho-modal); }
+
+/* -------------------------------------------------------------- Compras */
+
+.registro__cierre {
+  display: flex;
+  align-items: center;
+  gap: var(--e-4);
+}
+
+.registro__total {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  text-align: right;
+  font-size: var(--texto-sm);
+}
+
+/* El total que devolvio el servidor, que es el que vale. Se muestra mas grande
+   que el orientativo justamente para que no se confundan. */
+.registro__total--confirmado {
+  align-items: flex-start;
+  margin: var(--e-4) 0;
+  text-align: left;
+  font-size: var(--texto-xl);
+}
+
+.opcion {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  min-height: var(--objetivo-min);
+  font-size: var(--texto-sm);
+}

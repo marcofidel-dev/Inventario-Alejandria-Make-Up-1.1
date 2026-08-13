@@ -1,0 +1,78 @@
+/* =====================================================================
+   Base: reset minimo y estilos de elementos.
+
+   Todo valor sale de tokens.css. Si algo hace falta y no esta alli, se
+   agrega alli primero: la guarda de frontend/guardas/verificar.mjs falla
+   el build ante cualquier literal en este archivo o en los componentes.
+   ===================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--fuente-ui);
+  font-size: var(--texto-base);
+  line-height: var(--interlinea);
+  color: var(--texto);
+  background: var(--fondo);
+  /* En una app de escritorio, seleccionar texto por accidente al arrastrar
+     en una tabla es ruido. El texto de datos si se puede seleccionar. */
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  margin: 0;
+  line-height: var(--interlinea-apretada);
+  font-weight: var(--peso-fuerte);
+}
+
+h1 { font-size: var(--texto-xl); }
+h2 { font-size: var(--texto-lg); }
+h3 { font-size: var(--texto-base); }
+
+p { margin: 0; }
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: var(--texto-base);
+  color: var(--texto);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+/* Utilidades de texto, para no repetir la misma regla en cada componente. */
+.texto-secundario { color: var(--texto-secundario); }
+.texto-tenue      { color: var(--texto-tenue); font-size: var(--texto-xs); }
+.solo-lectores    {
+  position: absolute;
+  width: var(--e-1);
+  height: var(--e-1);
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

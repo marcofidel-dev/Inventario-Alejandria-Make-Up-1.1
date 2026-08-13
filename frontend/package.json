@@ -1,0 +1,32 @@
+{
+  "name": "alejandria-makeup-frontend",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "guardas": "node guardas/verificar.mjs",
+    "guardas:romper": "node guardas/romper.mjs",
+    "test": "vitest run",
+    "test:mirar": "vitest",
+    "test:romper": "node pruebas/romper.mjs",
+    "build": "npm run guardas && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/source-sans-3": "^5.3.0",
+    "lucide-react": "^1.31.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.4",
+    "@vitejs/plugin-react": "^4.3.3",
+    "jsdom": "^27.0.1",
+    "vite": "^5.4.10",
+    "vitest": "^4.1.10"
+  }
+}
