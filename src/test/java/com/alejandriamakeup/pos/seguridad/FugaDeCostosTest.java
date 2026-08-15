@@ -97,6 +97,7 @@ class FugaDeCostosTest {
     private RequestMappingHandlerMapping mapeos;
 
     private static Long idVariante;
+    private static Long idVenta;
     private ClienteHttpDePrueba empleada;
     private ClienteHttpDePrueba duena;
 
@@ -128,6 +129,20 @@ class FugaDeCostosTest {
         empleada.post("/api/v1/auth/login", "{\"nombre\":\"Camila\",\"pin\":\"2222\"}");
         duena = new ClienteHttpDePrueba(puerto);
         duena.post("/api/v1/auth/login", "{\"nombre\":\"Alejandra\",\"pin\":\"1111\"}");
+
+        // Una venta de verdad, con COSTO_UNO congelado dentro de su venta_item. Sin
+        // ella, GET /api/v1/ventas/{id} respondería 404 en el barrido y la ruta
+        // pasaría el test sin haber enseñado nunca un cuerpo.
+        if (idVenta == null) {
+            duena.post("/api/v1/caja/sesiones", "{\"baseInicial\":100000}");
+            Respuesta venta = duena.post("/api/v1/ventas",
+                    // Sin la palabra "costo" en el uuid: viaja en el cuerpo de la
+                    // respuesta y el barrido lo leería como una fuga.
+                    "{\"uuid\":\"barrido-de-la-fuga\",\"metodoPago\":\"EFECTIVO\","
+                            + "\"efectivoRecibido\":50000,\"lineas\":[{\"varianteId\":"
+                            + idVariante + ",\"cantidad\":1}]}");
+            idVenta = Long.parseLong(venta.cuerpo().replaceFirst("^\\{\"id\":(\\d+).*$", "$1"));
+        }
     }
 
     @Test
@@ -218,11 +233,23 @@ class FugaDeCostosTest {
             for (var patron : patrones.getPatterns()) {
                 String ruta = patron.getPatternString();
                 if (ruta.startsWith("/api/")) {
-                    rutas.add(ruta.replaceAll("\\{[^/}]+}", String.valueOf(idVariante)));
+                    rutas.add(ruta.replaceAll("\\{[^/}]+}", String.valueOf(idPara(ruta))));
                 }
             }
         });
         return rutas.stream().sorted().toList();
+    }
+
+    /**
+     * Qué id sustituir en cada ruta con variable.
+     *
+     * <p>El id de la variante sirve para casi todo por casualidad —los fixtures son
+     * pequeños y los ids se solapan—, pero no para {@code /ventas/{id}}: ahí un id
+     * equivocado da 404 y el barrido pasaría sin haber mirado nunca el cuerpo de una
+     * venta, que es justamente donde vive el costo congelado.
+     */
+    private long idPara(String ruta) {
+        return ruta.startsWith("/api/v1/ventas") ? idVenta : idVariante;
     }
 
     private String recortar(String cuerpo) {

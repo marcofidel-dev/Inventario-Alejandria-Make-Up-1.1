@@ -5,6 +5,7 @@ import { useCatalogo } from './catalogo/useCatalogo.js'
 import { useCompras } from './compras/useCompras.js'
 import { AjusteInventario } from './pantallas/AjusteInventario.jsx'
 import { Armazon, Proximamente, seccionesVisibles } from './pantallas/Armazon.jsx'
+import { Caja } from './pantallas/Caja.jsx'
 import { CargaInicial } from './pantallas/CargaInicial.jsx'
 import { Catalogo } from './pantallas/Catalogo.jsx'
 import { Compras } from './pantallas/Compras.jsx'
@@ -74,17 +75,23 @@ function Sesion() {
 
   return (
     <Armazon vista={vistaEfectiva} alCambiarVista={setVista}>
-      <Contenido vista={vistaEfectiva} catalogo={catalogo} compras={compras} />
+      <Contenido vista={vistaEfectiva} catalogo={catalogo} compras={compras}
+                 alIrA={setVista} />
     </Armazon>
   )
 }
 
-function Contenido({ vista, catalogo, compras }) {
+function Contenido({ vista, catalogo, compras, alIrA }) {
   const donde = `${vista.seccion}/${vista.pestana ?? ''}`
 
   switch (donde) {
+    // Sin pestañas: pestanaInicialDe() devuelve null y la vista queda en 'caja/'.
+    case 'caja/':
+      return <Caja />
     case 'catalogo/productos':
-      return <Catalogo catalogo={catalogo} />
+      // El catalogo no crea productos: su estado vacio manda a las dos pantallas
+      // por donde entra la mercancia, y para eso necesita mover la vista.
+      return <Catalogo catalogo={catalogo} alIrA={alIrA} />
     case 'compras/compras':
       return <Compras catalogo={catalogo} compras={compras} />
     case 'compras/proveedores':

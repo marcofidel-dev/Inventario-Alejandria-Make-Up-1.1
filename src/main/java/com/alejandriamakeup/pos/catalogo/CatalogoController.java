@@ -146,13 +146,16 @@ public class CatalogoController {
     @ResponseStatus(HttpStatus.CREATED)
     public CatalogoDto.VarianteDto crearVariante(
             @Valid @RequestBody PeticionesCatalogo.Variante peticion) {
-        return aDto(servicioVariante.crear(peticion), 0L);
+        // Recién creada: cero movimientos, y por eso el catálogo todavía no la lista.
+        // Aparece cuando se recibe la compra o se hace la carga inicial.
+        return aDto(servicioVariante.crear(peticion), 0L, false);
     }
 
     @PutMapping("/variantes/{id}")
     public CatalogoDto.VarianteDto actualizarVariante(
             @PathVariable long id, @Valid @RequestBody PeticionesCatalogo.Variante peticion) {
-        return aDto(servicioVariante.actualizar(id, peticion), null);
+        return aDto(servicioVariante.actualizar(id, peticion), null,
+                servicioVariante.tieneMovimientos(id));
     }
 
     @PostMapping("/variantes/{id}/desactivacion")
@@ -187,7 +190,7 @@ public class CatalogoController {
      * que está en cero, y quien la edita ya tiene el catálogo cargado. Pedirlo aquí
      * sería una consulta por cada guardado para un dato que el cliente no usa.
      */
-    private CatalogoDto.VarianteDto aDto(Variante variante, Long stock) {
+    private CatalogoDto.VarianteDto aDto(Variante variante, Long stock, boolean conHistorial) {
         return new CatalogoDto.VarianteDto(
                 variante.getId(),
                 variante.getProducto().getId(),
@@ -197,6 +200,7 @@ public class CatalogoController {
                 variante.getPrecioVenta(),
                 variante.getStockMinimo(),
                 stock == null ? 0L : stock,
+                conHistorial,
                 variante.getFechaVencimiento(),
                 variante.getPaoMeses(),
                 variante.isActivo());

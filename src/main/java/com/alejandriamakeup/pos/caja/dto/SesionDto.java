@@ -1,5 +1,7 @@
 package com.alejandriamakeup.pos.caja.dto;
 
+import java.util.List;
+
 /**
  * Una sesión de caja vista desde la API. Tiene dos formas y no una con campos
  * nulos, y eso es el corazón del cierre a ciegas.
@@ -36,6 +38,11 @@ public sealed interface SesionDto {
     /**
      * La sesión ya cerrada. Aquí sí van los tres valores congelados: el conteo ya
      * se hizo, así que revelarlos no adelanta nada.
+     *
+     * <p>{@code observaciones} está <strong>en desuso</strong> desde V6: viajaba
+     * dentro de {@code CerrarSesionPeticion}, o sea antes de saber si había algo que
+     * observar. Se mantiene para las filas que ya lo tengan escrito; lo que se
+     * escribe hoy son {@code notas}, que se agregan después y llevan autor y fecha.
      */
     record Cerrada(
             Long id,
@@ -51,6 +58,13 @@ public sealed interface SesionDto {
             Long diferencia,
             Long montoRetirado,
             Long baseSiguiente,
-            String observaciones) implements SesionDto {
+            String observaciones,
+
+            /**
+             * Lo que se anotó sobre esta sesión, en orden. Una sesión con diferencia
+             * distinta de cero y sin ninguna nota es una que nadie explicó todavía,
+             * y la pantalla la marca así.
+             */
+            List<NotaSesionCajaDto> notas) implements SesionDto {
     }
 }

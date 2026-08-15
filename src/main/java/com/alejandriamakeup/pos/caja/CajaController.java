@@ -12,8 +12,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.alejandriamakeup.pos.caja.dto.AbrirSesionPeticion;
+import com.alejandriamakeup.pos.caja.dto.AnotarPeticion;
+import com.alejandriamakeup.pos.caja.dto.ArqueoDto;
 import com.alejandriamakeup.pos.caja.dto.CerrarSesionPeticion;
 import com.alejandriamakeup.pos.caja.dto.MovimientoCajaDto;
+import com.alejandriamakeup.pos.caja.dto.NotaSesionCajaDto;
 import com.alejandriamakeup.pos.caja.dto.RegistrarMovimientoPeticion;
 import com.alejandriamakeup.pos.caja.dto.SesionDto;
 import com.alejandriamakeup.pos.caja.dto.SugerenciaAperturaDto;
@@ -72,19 +75,33 @@ public class CajaController {
 
     @GetMapping("/sesiones/{id}/movimientos")
     public List<MovimientoCajaDto> movimientos(@PathVariable long id, HttpSession sesion) {
-        return servicioSesion
-                .movimientosDe(id, SesionHttp.usuarioIdObligatorio(sesion), rol(sesion))
-                .stream()
-                .map(MovimientoCajaDto::de)
-                .toList();
+        return servicioSesion.movimientosDe(id, SesionHttp.usuarioIdObligatorio(sesion), rol(sesion));
     }
 
     /** La única respuesta del sistema que revela esperado, contado y diferencia. */
     @PostMapping("/sesiones/{id}/cierre")
-    public SesionDto.Cerrada cerrar(@PathVariable long id,
-                                    @Valid @RequestBody CerrarSesionPeticion peticion,
-                                    HttpSession sesion) {
+    public ArqueoDto cerrar(@PathVariable long id,
+                            @Valid @RequestBody CerrarSesionPeticion peticion,
+                            HttpSession sesion) {
         return servicioSesion.cerrar(id, peticion, SesionHttp.usuarioIdObligatorio(sesion));
+    }
+
+    @GetMapping("/sesiones/{id}/notas")
+    public List<NotaSesionCajaDto> notas(@PathVariable long id, HttpSession sesion) {
+        return servicioSesion.notasDe(id, SesionHttp.usuarioIdObligatorio(sesion), rol(sesion));
+    }
+
+    /**
+     * Agrega una nota. No modifica la sesión: las explicaciones se acumulan, igual
+     * que los movimientos, y por eso esto es un POST y no un PUT.
+     */
+    @PostMapping("/sesiones/{id}/notas")
+    @ResponseStatus(HttpStatus.CREATED)
+    public NotaSesionCajaDto anotar(@PathVariable long id,
+                                    @Valid @RequestBody AnotarPeticion peticion,
+                                    HttpSession sesion) {
+        return servicioSesion.anotar(id, peticion.texto(),
+                SesionHttp.usuarioIdObligatorio(sesion), rol(sesion));
     }
 
     @PostMapping("/movimientos")

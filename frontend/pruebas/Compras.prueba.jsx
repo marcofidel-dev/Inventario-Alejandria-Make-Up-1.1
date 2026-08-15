@@ -179,6 +179,27 @@ describe('Compras', () => {
       expect(espia.mock.calls).toHaveLength(llamadasAntes)
     })
 
+    /**
+     * LA EXCEPCION A LA REGLA DEL CATALOGO, y por eso tiene prueba propia.
+     *
+     * El catalogo y el buscador de venta esconden las variantes sin historial. Aqui
+     * no: la mercancia esta llegando, la variante se acaba de crear para esta misma
+     * factura y todavia no tiene ni un movimiento. Si alguien "corrige" esta pantalla
+     * para que use la lista corta, comprar un producto nuevo deja de ser posible y no
+     * se nota hasta que hay una factura de proveedor sobre el mostrador.
+     */
+    it('el buscador de la compra sí encuentra una variante sin historial', async () => {
+      const usuario = userEvent.setup()
+      await montar()
+
+      await usuario.click(screen.getByRole('button', { name: /Registrar una compra/ }))
+      await screen.findByRole('heading', { name: 'Registrar una compra' })
+
+      await usuario.type(screen.getByLabelText('Variante de la línea 1'), 'coral')
+
+      expect(await screen.findByRole('option', { name: /Coral pendiente/ })).toBeInTheDocument()
+    })
+
     /** Enter en el costo agrega la linea siguiente: la factura se copia sin raton. */
     it('Enter en el costo agrega otra línea', async () => {
       const usuario = userEvent.setup()

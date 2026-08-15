@@ -1,16 +1,25 @@
 import { useMemo, useState } from 'react'
-import { PackageOpen, Pencil, Plus } from 'lucide-react'
+import { PackageOpen, Pencil } from 'lucide-react'
 
 import { Aviso, AvisoDeError } from '../componentes/Aviso.jsx'
 import { Boton } from '../componentes/Boton.jsx'
 import { Campo } from '../componentes/Campo.jsx'
 import { filtrar } from '../catalogo/useCatalogo.js'
-import { FormularioProducto } from './FormularioProducto.jsx'
 import { FormularioVariante } from './FormularioVariante.jsx'
 import { PERMISOS, useSesion } from '../sesion/SesionContext.jsx'
 
 /**
  * El catalogo: la pantalla que la EMPLEADA mira todo el dia.
+ *
+ * DE AQUI NO NACE NINGUN PRODUCTO. Los productos nacen donde entra mercancia fisica
+ * con un costo —registrar una compra y la carga inicial— y esta pantalla administra
+ * lo que ya existe: precio, stock minimo, activacion y correcciones de captura. Un
+ * producto creado sin costo real se puede vender congelando costo 0 en la VentaItem,
+ * y el margen historico queda corrompido para siempre sin que nadie lo note.
+ *
+ * Por lo mismo solo se listan las variantes CON HISTORIAL (`catalogo.filas`): una
+ * variante creada dentro de un borrador de compra no aparece hasta que la compra se
+ * recibe, y si el borrador se descarta no aparece nunca.
  *
  * La busqueda filtra en memoria sobre lo ya cargado. Ni una llamada por tecla: eso
  * funciona en desarrollo con tres productos y se cae en el mostrador con el
@@ -19,7 +28,7 @@ import { PERMISOS, useSesion } from '../sesion/SesionContext.jsx'
  * Sin costos en ninguna columna. No es que se oculten al pintar: el endpoint del
  * catalogo no los trae para nadie, y el de costos solo se llama con permiso.
  */
-export function Catalogo({ catalogo }) {
+export function Catalogo({ catalogo, alIrA }) {
   const { puede } = useSesion()
   const puedeEditar = puede(PERMISOS.editarCatalogo)
 
@@ -47,25 +56,10 @@ export function Catalogo({ catalogo }) {
     <>
       <div className="pantalla__cabecera">
         <h1>Catálogo</h1>
-        {puedeEditar && (
-          <div className="pantalla__acciones">
-            <Boton icono={Plus} onClick={() => setFormulario({ tipo: 'producto' })}>
-              Nuevo producto
-            </Boton>
-            <Boton
-              variante="principal"
-              icono={Plus}
-              disabled={catalogo.productos.length === 0}
-              onClick={() => setFormulario({ tipo: 'variante' })}
-            >
-              Nueva variante
-            </Boton>
-          </div>
-        )}
       </div>
 
       {catalogo.estaVacio ? (
-        <PrimerosPasos puedeEditar={puedeEditar} alCrearProducto={() => setFormulario({ tipo: 'producto' })} />
+        <PrimerosPasos alIrA={alIrA} />
       ) : (
         <>
           <div className="filtros">
@@ -175,14 +169,7 @@ export function Catalogo({ catalogo }) {
         </>
       )}
 
-      {formulario?.tipo === 'producto' && (
-        <FormularioProducto
-          catalogo={catalogo}
-          alCerrar={() => setFormulario(null)}
-          alGuardar={async () => { await catalogo.recargar(); setFormulario(null) }}
-        />
-      )}
-
+      {/* Solo edicion: `variante` siempre viene puesta, aqui no se crea ninguna. */}
       {formulario?.tipo === 'variante' && (
         <FormularioVariante
           catalogo={catalogo}
@@ -196,26 +183,38 @@ export function Catalogo({ catalogo }) {
 }
 
 /**
- * Catalogo vacio: que hacer primero, no un mensaje triste. Quien abre el sistema
- * por primera vez no necesita que le digan que esta vacio — ya lo ve — necesita
- * saber por donde empezar.
+ * Catalogo vacio: por donde entran los productos, que no es por aqui.
+ *
+ * Ya no dice "crea tu primer producto" porque desde esta pantalla no se crea nada.
+ * Un producto aparece cuando entra mercancia con un costo, y eso pasa en dos sitios.
+ * Los enlaces llevan a los dos: decir de donde salen sin decir como llegar seria
+ * dejar a alguien buscando en el menu.
  */
-function PrimerosPasos({ puedeEditar, alCrearProducto }) {
+function PrimerosPasos({ alIrA }) {
+  const { puede } = useSesion()
+
   return (
     <div className="estado-vacio">
       <PackageOpen size={40} className="estado-vacio__icono" aria-hidden="true" />
-      <h2 className="estado-vacio__titulo">Empecemos por el primer producto</h2>
+      <h2 className="estado-vacio__titulo">Todavía no hay productos con existencias</h2>
       <p>
-        Al crear un producto eliges su marca y su categoría, y si todavía no existen las
-        creas ahí mismo. Después cada tono o tamaño es una variante.
+        Los productos aparecen aquí cuando entra mercancía: al recibir una compra a un
+        proveedor, o al hacer la carga inicial del inventario que ya está en la tienda.
+        Desde el catálogo se administran los precios y las existencias, no se crean.
       </p>
-      {puedeEditar && (
-        <div className="estado-vacio__acciones">
-          <Boton variante="principal" icono={Plus} onClick={alCrearProducto}>
-            Crear el primer producto
+      <div className="estado-vacio__acciones">
+        {puede(PERMISOS.registrarCompras) && (
+          <Boton variante="principal"
+                 onClick={() => alIrA?.({ seccion: 'compras', pestana: 'compras' })}>
+            Registrar una compra
           </Boton>
-        </div>
-      )}
+        )}
+        {puede(PERMISOS.cargarInventarioInicial) && (
+          <Boton onClick={() => alIrA?.({ seccion: 'inventario', pestana: 'carga-inicial' })}>
+            Hacer la carga inicial
+          </Boton>
+        )}
+      </div>
     </div>
   )
 }

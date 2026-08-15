@@ -96,6 +96,15 @@ public class ServicioVariante {
         return new ResultadoActivacionDto(variante.getId(), descripcion(variante), activo, advertencia);
     }
 
+    /**
+     * Si la variante tiene algún movimiento. Lo pregunta la respuesta de una edición
+     * para no afirmar lo que no sabe: una variante recién creada no tiene ninguno —el
+     * catálogo no la lista— y una que ya recibió mercancía sí.
+     */
+    public boolean tieneMovimientos(long id) {
+        return movimientoRepository.existsByVarianteId(id);
+    }
+
     public Variante buscar(long id) {
         return varianteRepository.findById(id).orElseThrow(() ->
                 ErrorDeAplicacion.noEncontrado("No existe la variante " + id));

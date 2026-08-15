@@ -3,7 +3,9 @@ package com.alejandriamakeup.pos.caja;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,7 +15,10 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.alejandriamakeup.pos.backup.BackupService;
+import com.alejandriamakeup.pos.caja.dto.ArqueoDto;
 import com.alejandriamakeup.pos.caja.dto.CerrarSesionPeticion;
+import com.alejandriamakeup.pos.caja.dto.MovimientoCajaDto;
+import com.alejandriamakeup.pos.caja.dto.NotaSesionCajaDto;
 import com.alejandriamakeup.pos.caja.dto.SesionDto;
 import com.alejandriamakeup.pos.caja.dto.SugerenciaAperturaDto;
 import com.alejandriamakeup.pos.config.Fechas;
@@ -24,6 +29,7 @@ import com.alejandriamakeup.pos.seguridad.PermisosPorRol;
 import com.alejandriamakeup.pos.usuarios.Rol;
 import com.alejandriamakeup.pos.usuarios.Usuario;
 import com.alejandriamakeup.pos.usuarios.UsuarioRepository;
+import com.alejandriamakeup.pos.ventas.VentaRepository;
 import com.alejandriamakeup.pos.web.ErrorDeAplicacion;
 
 /**
@@ -45,20 +51,26 @@ public class ServicioSesionCaja {
     private final SesionCajaRepository sesionRepository;
     private final MovimientoCajaRepository movimientoRepository;
     private final ConteoDenominacionRepository conteoRepository;
+    private final NotaSesionCajaRepository notaRepository;
     private final UsuarioRepository usuarioRepository;
+    private final VentaRepository ventaRepository;
     private final ServicioConsecutivo servicioConsecutivo;
     private final BackupService backupService;
 
     public ServicioSesionCaja(SesionCajaRepository sesionRepository,
                               MovimientoCajaRepository movimientoRepository,
                               ConteoDenominacionRepository conteoRepository,
+                              NotaSesionCajaRepository notaRepository,
                               UsuarioRepository usuarioRepository,
+                              VentaRepository ventaRepository,
                               ServicioConsecutivo servicioConsecutivo,
                               BackupService backupService) {
         this.sesionRepository = sesionRepository;
         this.movimientoRepository = movimientoRepository;
         this.conteoRepository = conteoRepository;
+        this.notaRepository = notaRepository;
         this.usuarioRepository = usuarioRepository;
+        this.ventaRepository = ventaRepository;
         this.servicioConsecutivo = servicioConsecutivo;
         this.backupService = backupService;
     }
@@ -177,14 +189,64 @@ public class ServicioSesionCaja {
                 ? sesionRepository.findAllByOrderByFechaAperturaDesc()
                 : sesionRepository.findByUsuarioAperturaIdOrderByFechaAperturaDesc(usuarioId);
 
-        // Una sola consulta para todo el listado, no una por fila.
+        // Una sola consulta para todo el listado, no una por fila. Lo mismo con las
+        // notas: al año son unas trescientas sesiones y el listado se pinta entero.
         boolean hayAbierta = sesionRepository.buscarAbierta().isPresent();
-        return sesiones.stream().map(sesion -> aDto(sesion, hayAbierta)).toList();
+        Map<Long, List<NotaSesionCajaDto>> notas = notasDe(sesiones.stream().map(SesionCaja::getId).toList());
+
+        return sesiones.stream().map(sesion -> aDto(sesion, hayAbierta, notas)).toList();
     }
 
-    public List<MovimientoCaja> movimientosDe(long sesionId, long usuarioId, Rol rol) {
+    /**
+     * Los movimientos de una sesión, ya como DTO.
+     *
+     * <p>El mapeo va aquí y no en el controlador a propósito: {@code MovimientoCajaDto}
+     * lee {@code usuario.nombre}, que es LAZY, y con {@code open-in-view: false} fuera
+     * de la transacción eso revienta con {@code LazyInitializationException}.
+     */
+    public List<MovimientoCajaDto> movimientosDe(long sesionId, long usuarioId, Rol rol) {
         SesionCaja sesion = buscarConPermiso(sesionId, usuarioId, rol);
-        return movimientoRepository.findBySesionIdOrderByFechaAsc(sesion.getId());
+        return movimientoRepository.findBySesionIdOrderByFechaAsc(sesion.getId())
+                .stream()
+                .map(MovimientoCajaDto::de)
+                .toList();
+    }
+
+    // ----------------------------------------------------------------- notas
+
+    /**
+     * Agrega una nota a una sesión. Nunca modifica la sesión.
+     *
+     * <p>Se puede anotar sobre una sesión ya cerrada, y días después: es lo que hace
+     * que una diferencia se pueda explicar <em>cuando se sabe que la hubo</em>, que es
+     * el único momento en que hay algo que explicar. La fila de {@code sesion_caja}
+     * no se toca — sus montos, fechas y usuarios siguen siendo inmutables.
+     *
+     * <p>Quién puede anotar sobre qué sesión lo decide {@link #buscarConPermiso}, el
+     * mismo que decide quién puede verla: no tendría sentido poder anotar sobre una
+     * sesión que no se puede leer.
+     */
+    @Transactional
+    public NotaSesionCajaDto anotar(long sesionId, String texto, long usuarioId, Rol rol) {
+        SesionCaja sesion = buscarConPermiso(sesionId, usuarioId, rol);
+
+        NotaSesionCaja nota = notaRepository.save(NotaSesionCaja.builder()
+                .sesion(sesion)
+                .usuario(usuario(usuarioId))
+                .fecha(Fechas.ahora())
+                .texto(texto.trim())
+                .build());
+
+        log.info("Nota agregada a la sesión {}", sesion.getConsecutivo());
+        return NotaSesionCajaDto.de(nota);
+    }
+
+    public List<NotaSesionCajaDto> notasDe(long sesionId, long usuarioId, Rol rol) {
+        SesionCaja sesion = buscarConPermiso(sesionId, usuarioId, rol);
+        return notaRepository.findBySesionIdOrderByFechaAsc(sesion.getId())
+                .stream()
+                .map(NotaSesionCajaDto::de)
+                .toList();
     }
 
     // ----------------------------------------------------------------- cerrar
@@ -202,7 +264,7 @@ public class ServicioSesionCaja {
      * sola conexión llamarlo dentro de la transacción se cuelga hasta el timeout.
      */
     @Transactional
-    public SesionDto.Cerrada cerrar(long sesionId, CerrarSesionPeticion peticion, long usuarioId) {
+    public ArqueoDto cerrar(long sesionId, CerrarSesionPeticion peticion, long usuarioId) {
         SesionCaja sesion = sesionRepository.findById(sesionId).orElseThrow(() ->
                 ErrorDeAplicacion.noEncontrado("No existe la sesión de caja " + sesionId));
 
@@ -235,7 +297,8 @@ public class ServicioSesionCaja {
 
         respaldarDespuesDelCommit();
 
-        return (SesionDto.Cerrada) aDto(cerrada);
+        return new ArqueoDto((SesionDto.Cerrada) aDto(cerrada),
+                ventaRepository.desglosePorMetodo(cerrada.getId()));
     }
 
     private void respaldarDespuesDelCommit() {
@@ -301,7 +364,18 @@ public class ServicioSesionCaja {
     }
 
     private SesionDto aDto(SesionCaja sesion) {
-        return aDto(sesion, sesionRepository.buscarAbierta().isPresent());
+        return aDto(sesion, sesionRepository.buscarAbierta().isPresent(),
+                notasDe(List.of(sesion.getId())));
+    }
+
+    /** Las notas de varias sesiones, agrupadas por sesión. Una consulta, no una por fila. */
+    private Map<Long, List<NotaSesionCajaDto>> notasDe(List<Long> sesionIds) {
+        if (sesionIds.isEmpty()) return Map.of();
+
+        return notaRepository.findBySesionIdInOrderByFechaAsc(sesionIds).stream()
+                .collect(Collectors.groupingBy(
+                        nota -> nota.getSesion().getId(),
+                        Collectors.mapping(NotaSesionCajaDto::de, Collectors.toList())));
     }
 
     /**
@@ -319,7 +393,8 @@ public class ServicioSesionCaja {
      * <p>Cerrada la caja del día, el dato vuelve a aparecer: ya no hay nada que
      * proteger.
      */
-    private SesionDto aDto(SesionCaja sesion, boolean hayUnaSesionAbierta) {
+    private SesionDto aDto(SesionCaja sesion, boolean hayUnaSesionAbierta,
+                           Map<Long, List<NotaSesionCajaDto>> notas) {
         if (sesion.getEstado() == EstadoSesionCaja.ABIERTA) {
             return new SesionDto.Abierta(
                     sesion.getId(),
@@ -345,6 +420,7 @@ public class ServicioSesionCaja {
                 sesion.getDiferencia(),
                 sesion.getMontoRetirado(),
                 hayUnaSesionAbierta ? null : sesion.getBaseSiguiente(),
-                sesion.getObservaciones());
+                sesion.getObservaciones(),
+                notas.getOrDefault(sesion.getId(), List.of()));
     }
 }

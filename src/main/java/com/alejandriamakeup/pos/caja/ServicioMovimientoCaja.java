@@ -78,15 +78,45 @@ public class ServicioMovimientoCaja {
      */
     @Transactional
     public MovimientoCaja registrarVenta(Venta venta) {
-        if (venta.getMetodoPago() != MetodoPago.EFECTIVO) {
-            log.debug("Venta {} por {}: no toca movimiento_caja", venta.getConsecutivo(),
-                    venta.getMetodoPago());
+        if (noMueveElCajon(venta)) {
             return null;
         }
 
         return guardar(venta.getSesionCaja(), TipoMovimientoCaja.VENTA_EFECTIVO,
                 TipoMovimientoCaja.VENTA_EFECTIVO.conSigno(venta.getTotal()),
                 "Venta " + venta.getConsecutivo(), venta.getUsuario().getId(), venta);
+    }
+
+    /**
+     * Devuelve al cajón lo que cobró una venta anulada.
+     *
+     * <p><strong>Golpea la sesión operable de hoy, nunca la de la venta.</strong> Una
+     * sesión cerrada es inmutable: su efectivo esperado y su diferencia quedaron
+     * congelados y firmados en el arqueo, y meterle un movimiento después haría que
+     * los números de un cierre ya revisado dejaran de cuadrar con su propia lista de
+     * movimientos. La plata sale del cajón que está abierto ahora, que es el cajón del
+     * que de verdad sale.
+     *
+     * <p>No hay una rama para "la sesión original sigue abierta": cuando lo está,
+     * {@code sesionOperableHoy()} devuelve esa misma sesión. Un camino solo, que es lo
+     * que impide que el caso raro sea el único que nadie ejercita.
+     *
+     * <p>Sin caja abierta, 409. No se devuelve efectivo de un cajón cerrado: si la
+     * anulación fuera igual, quedaría una venta anulada cuya plata no salió de
+     * ninguna parte.
+     *
+     * @return el movimiento creado, o {@code null} si la venta no fue en efectivo
+     */
+    @Transactional
+    public MovimientoCaja registrarAnulacionDeVenta(Venta venta, long usuarioId) {
+        if (noMueveElCajon(venta)) {
+            return null;
+        }
+
+        SesionCaja sesion = servicioSesion.sesionOperableHoy();
+        return guardar(sesion, TipoMovimientoCaja.ANULACION,
+                TipoMovimientoCaja.ANULACION.conSigno(venta.getTotal()),
+                "Anulación de la venta " + venta.getConsecutivo(), usuarioId, venta);
     }
 
     public List<MovimientoCaja> deSesion(long sesionId) {
@@ -96,6 +126,33 @@ public class ServicioMovimientoCaja {
     /** La suma con signo de los movimientos. Sin la base inicial: eso lo suma el cierre. */
     public long sumaDe(long sesionId) {
         return movimientoRepository.sumaDe(sesionId);
+    }
+
+    /**
+     * Si esta venta no tiene por qué tocar el cajón, ni al cobrarse ni al anularse.
+     *
+     * <p>Dos casos, y el segundo no es teórico. El primero es el método de pago: solo
+     * el efectivo entra al cajón.
+     *
+     * <p>El segundo es el <strong>total en cero</strong> — un obsequio, o un descuento
+     * del 100%, que el sistema permite porque {@code descuento <= subtotal} admite la
+     * igualdad. Ahí no entra ni sale un peso, y escribir el movimiento de todos modos
+     * violaría el {@code CHECK (monto <> 0)} de {@code movimiento_caja} en el flush, ya
+     * con la venta y su inventario escritos. La transacción lo revertiría todo, así que
+     * no quedarían datos a medias, pero la clienta se iría sin su obsequio y con un 500
+     * en pantalla que no explica nada.
+     */
+    private boolean noMueveElCajon(Venta venta) {
+        if (venta.getMetodoPago() != MetodoPago.EFECTIVO) {
+            log.debug("Venta {} por {}: no toca movimiento_caja", venta.getConsecutivo(),
+                    venta.getMetodoPago());
+            return true;
+        }
+        if (venta.getTotal() == 0) {
+            log.debug("Venta {} con total 0: no toca movimiento_caja", venta.getConsecutivo());
+            return true;
+        }
+        return false;
     }
 
     private MovimientoCaja guardar(SesionCaja sesion, TipoMovimientoCaja tipo, long montoConSigno,

@@ -101,7 +101,7 @@ spring:
 **Soporte**
 
 16. `Consecutivo` — contador por tipo de documento (`VENTA` / `COMPRA` / `SESION_CAJA`), incrementado dentro de la misma transacción. El `AUTOINCREMENT` de SQLite puede saltar números si hay rollback.
-17. `Cliente` — nombre, whatsapp, notas, fecha de creación. La tabla existe desde V2 para no reconstruirla después; el flujo que la use está por definir
+17. `Cliente` — nombre, whatsapp, notas, fecha de creación. La tabla existe desde V2 para no reconstruirla después, y `venta.cliente_id` la referencia. **Sin CRUD, sin endpoints y sin flujo: hoy no hay forma de crear una clienta ni de asociarla a una venta.** Ver §11.1
 18. `Configuracion` — `clave` / `valor`. Creada en V1, antes del dominio
 
 ---
@@ -124,6 +124,11 @@ spring:
 - El stock **es** `SUM(cantidad)` sobre `MovimientoInventario`. Nunca un campo que se actualiza. Se permite una columna denormalizada por velocidad, pero la fuente de verdad es el log.
 - Nunca `UPDATE` ni `DELETE` sobre movimientos. Un error se corrige con un movimiento de ajuste.
 - La recepción de una compra recalcula el `costo_promedio` ponderado de la variante y genera sus movimientos.
+
+**Catálogo**
+- **Los productos y variantes se crean únicamente al registrar una compra o en la carga inicial. El catálogo administra existentes: precio, stock mínimo, activación y correcciones. Nunca crea. Un producto sin costo real permite congelar costo 0 en una venta y corromper el margen histórico.**
+- El catálogo y el buscador del POS **solo listan variantes con al menos un movimiento en el ledger**. Una variante creada dentro de un borrador de compra aparece cuando la compra se recibe; si el borrador se descarta, nunca. Los endpoints `POST` siguen existiendo — los usa el flujo de compra —, lo que se quita es la entrada desde la pantalla de catálogo.
+- Agotada y nunca recibida dan las dos stock 0. La distinción viaja en `VarianteDto.conHistorial`, no en el número.
 
 **Ventas**
 - Precio, costo y descripción se **congelan** en `VentaItem` al momento de la venta. Sin esto, cualquier cambio de precio corrompe retroactivamente todas las métricas históricas.
@@ -228,7 +233,7 @@ spring:
 
 En SQLite agregar una FK a una tabla existente obliga a reconstruirla. Todo lo de esta lista debe estar resuelto antes de la primera migración.
 
-- ~~**Clientes.**~~ **Resuelto en V2:** la tabla `Cliente` existe (nombre, whatsapp, notas) para no tener que reconstruir nada después. Queda por definir el flujo que la usa y si `Venta` la referencia.
+- **Clientes — resuelto a medias, y hay que decidir.** La parte de esquema está: la tabla `Cliente` existe desde V2 (nombre, whatsapp, notas) y `venta.cliente_id` es una FK nullable que la referencia. Lo que no existe es **nada más**: ni CRUD, ni endpoints, ni pantalla, ni forma de asociar una venta a una clienta. La Fase 8 dejó `clienteId` fuera de `PeticionesVentas` a propósito, porque no hay de dónde sacar el id. Quedó colgada de la peor manera posible: se respondió que sí se guardan clientes, se pagó el costo de esquema para no reconstruir después, y ahí se detuvo. Decidir explícitamente una de dos — se construye el flujo (¿para qué: fiado, apartados, recordar preferencias de tono, mandar el recibo por WhatsApp?) o se declara que la tabla queda dormida — porque una tabla vacía que nadie llena es indistinguible de un olvido, y dentro de un año nadie va a recordar cuál de las dos cosas era.
 - **Ventas fiadas / crédito.** Muy común en el comercio pequeño colombiano. Implica tablas de saldo y abonos, y cambia la lógica de caja: una venta fiada **no** genera movimiento de efectivo.
 - **Apartados / separados.** También muy común. Requiere el concepto de *stock reservado* vs *stock disponible*, que toca el cálculo central del inventario.
 - **Devoluciones y cambios.** Está el tipo de movimiento, pero no el flujo ni las tablas. En maquillaje el cambio de tono es frecuente.

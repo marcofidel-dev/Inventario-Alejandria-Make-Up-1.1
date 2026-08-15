@@ -72,9 +72,12 @@ public class ServicioCatalogoCompleto {
                         v.getCodigoBarras(),
                         v.getPrecioVenta(),
                         v.getStockMinimo(),
-                        // Una variante sin movimientos no sale del GROUP BY. Ausente y
-                        // cero no son lo mismo para quien lee la lista: aquí es cero.
+                        // Una variante sin movimientos no sale del GROUP BY. Su stock es
+                        // cero, pero lo que importa es la bandera: agotada y nunca
+                        // recibida dan el mismo número y no son lo mismo. El front lista
+                        // solo las que tienen historial.
                         stockPorVariante.getOrDefault(v.getId(), 0L),
+                        stockPorVariante.containsKey(v.getId()),
                         v.getFechaVencimiento(),
                         v.getPaoMeses(),
                         v.isActivo()))

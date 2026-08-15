@@ -290,8 +290,11 @@ function Recibida({ resultado, pago, haySesionDeCaja, reintentando, alReintentar
   )
 }
 
+// Sobre `todas`: la compra puede referirse a una variante que aun no tiene ningun
+// movimiento, y sin nombre la linea diria "Variante 87" justo cuando hay que decidir
+// si se recibe.
 function describir(catalogo, varianteId) {
-  const fila = catalogo.filas.find((f) => String(f.id) === String(varianteId))
+  const fila = catalogo.todas.find((f) => String(f.id) === String(varianteId))
   return fila ? descripcionDe(fila) : `Variante ${varianteId}`
 }
 

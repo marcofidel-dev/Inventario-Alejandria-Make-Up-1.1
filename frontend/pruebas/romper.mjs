@@ -30,6 +30,9 @@ const ARMAZON = src('pantallas', 'Armazon.jsx')
 const ENDPOINTS = src('api', 'endpoints.js')
 const REGISTRAR_COMPRA = src('pantallas', 'RegistrarCompra.jsx')
 const BAJAS = src('pantallas', 'BajasDeCompra.jsx')
+const CAJA = src('pantallas', 'Caja.jsx')
+const CERRAR_CAJA = src('pantallas', 'CerrarCaja.jsx')
+const CONTADOR = src('componentes', 'ContadorDeDenominaciones.jsx')
 
 function sustituir(de, a) {
   return (contenido) => {
@@ -170,6 +173,130 @@ const CASOS = [
     pruebas: 'pruebas/Catalogo.prueba.jsx',
     debeCaer: 'el stock negativo se marca distinto del stock bajo',
     romper: sustituir('stockNegativo: variante.stock < 0', 'stockNegativo: false'),
+  },
+
+  // ------------------------------------------------------------ Fase 7
+
+  {
+    regla: 'la API descarta el monto de los movimientos antes de que la pantalla lo vea',
+    archivo: ENDPOINTS,
+    pruebas: 'pruebas/Caja.prueba.jsx',
+    debeCaer: 'la API entrega los movimientos sin su monto',
+    romper: sustituir('const sinMonto = ({ monto, ...resto }) => resto',
+      'const sinMonto = (movimiento) => movimiento'),
+  },
+  {
+    regla: 'un monto que llegue a la pantalla por cualquier vía se ve en el DOM',
+    archivo: ENDPOINTS,
+    pruebas: 'pruebas/Caja.prueba.jsx',
+    debeCaer: 'ningún importe de los movimientos registrados queda en la pantalla',
+    // El descarte se rompe de la forma que de verdad pasaria: el monto vuelve, y de
+    // paso entra en un campo que la pantalla si pinta. Sin las dos cosas la prueba del
+    // DOM no podria caer, porque la lista no tiene columna de monto — que es
+    // justamente la segunda capa de la defensa.
+    romper: sustituir('const sinMonto = ({ monto, ...resto }) => resto',
+      'const sinMonto = (m) => ({ ...m, concepto: `${m.concepto} ${Math.abs(m.monto)}` })'),
+  },
+  {
+    regla: 'el historial no publica la base siguiente, que es la base inicial de hoy',
+    archivo: CAJA,
+    pruebas: 'pruebas/Caja.prueba.jsx',
+    debeCaer: 'no muestra la base siguiente de una sesión cerrada',
+    romper: sustituir('<td>{sesion.consecutivo}</td>',
+      '<td>{sesion.consecutivo} {sesion.baseSiguiente}</td>'),
+  },
+  {
+    regla: 'la sesión olvidada de un día anterior bloquea todo lo demás',
+    archivo: CAJA,
+    pruebas: 'pruebas/Caja.prueba.jsx',
+    debeCaer: 'bloquea todo lo demás y dice de qué fecha es',
+    romper: sustituir('if (sesion?.esDeUnDiaAnterior) {', 'if (false) {'),
+  },
+  {
+    regla: 'el historial en línea se corta en diez sesiones',
+    archivo: CAJA,
+    pruebas: 'pruebas/Caja.prueba.jsx',
+    debeCaer: 'se corta en diez sesiones y ofrece ver todas',
+    romper: sustituir('const SESIONES_EN_LINEA = 10', 'const SESIONES_EN_LINEA = 100'),
+  },
+  {
+    regla: 'el historial se pide al backend, no se filtra por usuario en el front',
+    archivo: CAJA,
+    pruebas: 'pruebas/Caja.prueba.jsx',
+    debeCaer: 'pinta las sesiones de otra persona sin filtrarlas',
+    romper: sustituir("const cerradas = sesiones.filter((una) => una.estado === 'CERRADA')",
+      "const cerradas = sesiones.filter((una) => una.estado === 'CERRADA'"
+        + " && una.usuarioApertura === 'Camila')"),
+  },
+  {
+    regla: 'la confirmación del conteo es un paso propio: contar y cerrar no son el mismo clic',
+    archivo: CERRAR_CAJA,
+    pruebas: 'pruebas/Caja.prueba.jsx',
+    debeCaer: 'no muestra nada del sistema hasta que el conteo está enviado',
+    romper: sustituir("onClick={() => setPaso('confirmar')}", 'onClick={cerrar}'),
+  },
+  {
+    // Lo mismo que protege un doble guardado en la carga inicial protege aqui un
+    // cierre doble, que es irreversible: vale la pena afirmarlo tambien sobre la caja.
+    regla: 'el botón bloqueado es lo único que impide cerrar la caja dos veces',
+    archivo: BOTON,
+    pruebas: 'pruebas/Caja.prueba.jsx',
+    debeCaer: 'el cierre se envía una sola vez aunque se pulse dos veces seguidas',
+    romper: sustituir('disabled={disabled || ocupado}', 'disabled={disabled}'),
+  },
+  {
+    regla: 'una sesión con diferencia y sin notas se marca como sin explicar',
+    archivo: CERRAR_CAJA,
+    pruebas: 'pruebas/Caja.prueba.jsx',
+    debeCaer: 'marca "sin explicar" la sesión con diferencia y sin ninguna nota',
+    romper: sustituir(
+      'return sesion.diferencia !== 0 && (sesion.notas?.length ?? 0) === 0',
+      'return false'),
+  },
+  {
+    regla: 'sobrante y faltante se distinguen: no es lo mismo que falte a que sobre',
+    archivo: CERRAR_CAJA,
+    pruebas: 'pruebas/Caja.prueba.jsx',
+    debeCaer: 'dice "sobraron" cuando la diferencia es a favor',
+    romper: sustituir(
+      "if (diferencia > 0) return { texto: 'sobraron', tono: 'favor', cuanto: diferencia }",
+      "if (diferencia > 0) return { texto: 'faltaron', tono: 'contra', cuanto: diferencia }"),
+  },
+  {
+    regla: 'una variante sin historial no se lista en el catálogo',
+    archivo: USE_CATALOGO,
+    pruebas: 'pruebas/Catalogo.prueba.jsx',
+    debeCaer: 'una variante sin historial no se lista',
+    romper: sustituir(
+      'const filas = useMemo(() => todas.filter((fila) => fila.conHistorial), [todas])',
+      'const filas = todas'),
+  },
+  {
+    // La misma rotura, otra garantia: `filas` es tambien de donde se serviria el
+    // buscador de venta, y con el filtro caido sugiere lo que nunca entro.
+    regla: 'con el filtro caído, el buscador sugiere lo que nunca entró',
+    archivo: USE_CATALOGO,
+    pruebas: 'pruebas/Catalogo.prueba.jsx',
+    debeCaer: 'tampoco la sugiere el buscador',
+    romper: sustituir(
+      'const filas = useMemo(() => todas.filter((fila) => fila.conHistorial), [todas])',
+      'const filas = todas'),
+  },
+  {
+    regla: 'la compra sí puede elegir una variante sin historial: la mercancía está llegando',
+    archivo: REGISTRAR_COMPRA,
+    pruebas: 'pruebas/Compras.prueba.jsx',
+    debeCaer: 'el buscador de la compra sí encuentra una variante sin historial',
+    romper: sustituir('filas={catalogo.todas}', 'filas={catalogo.filas}'),
+  },
+  {
+    regla: 'el total contado suma denominación por cantidad, que es como se cuenta la plata',
+    archivo: CONTADOR,
+    pruebas: 'pruebas/Caja.prueba.jsx',
+    debeCaer: 'no muestra nada del sistema hasta que el conteo está enviado',
+    romper: sustituir(
+      'suma + denominacion * (Number(conteo[denominacion]) || 0)',
+      'suma + denominacion + (Number(conteo[denominacion]) || 0)'),
   },
 ]
 

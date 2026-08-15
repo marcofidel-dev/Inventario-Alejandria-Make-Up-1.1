@@ -41,9 +41,15 @@ public record CatalogoDto(
      * La variante con su stock.
      *
      * <p>{@code stock} es la suma del ledger, calculada en una consulta agrupada para
-     * todas las variantes de una vez. Una variante sin ningún movimiento no aparece en
-     * ese {@code GROUP BY}, y aquí sale con <strong>stock 0</strong>: ausente y cero no
-     * son lo mismo para quien lee la lista.
+     * todas las variantes de una vez.
+     *
+     * <p><strong>{@code conHistorial} dice si la variante tiene algún movimiento.</strong>
+     * Es lo que separa "existe y está agotada" de "nunca entró mercancía": las dos dan
+     * stock 0 y no hay forma de distinguirlas mirando el número. El catálogo y el
+     * buscador de venta solo listan las que tienen historial —no se puede vender lo que
+     * nunca entró, y un producto sin costo real congelaría costo 0 en la venta—, mientras
+     * que las pantallas donde la mercancía entra (compra y carga inicial) necesitan
+     * justamente las otras, porque acaban de crearlas.
      */
     public record VarianteDto(
             Long id,
@@ -54,6 +60,7 @@ public record CatalogoDto(
             long precioVenta,
             int stockMinimo,
             long stock,
+            boolean conHistorial,
             LocalDate fechaVencimiento,
             Integer paoMeses,
             boolean activo) {

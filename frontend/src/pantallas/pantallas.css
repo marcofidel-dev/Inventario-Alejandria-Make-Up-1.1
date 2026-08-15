@@ -299,3 +299,117 @@
   min-height: var(--objetivo-min);
   font-size: var(--texto-sm);
 }
+
+/* ----------------------------------------------------------------- Caja */
+
+.caja__seccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  margin-top: var(--e-6);
+}
+
+/* Cerrar la caja vive en su propio bloque, separado de la fila de acciones
+   del turno. No es decoracion: registrar un movimiento pasa varias veces al
+   dia y no tiene consecuencias, cerrar pasa una vez y es irreversible. Con el
+   mismo aspecto y a dos centimetros, el error es cuestion de tiempo. */
+.caja__cierre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-6);
+  margin-top: var(--e-8);
+  padding: var(--e-4);
+  border: var(--separador-fuerte);
+  border-radius: var(--radio);
+  background: var(--fondo-hundido);
+}
+
+.caja__confirmacion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  max-width: var(--ancho-modal);
+  margin: var(--e-6) 0;
+  font-size: var(--texto-lg);
+}
+
+.caja__nota {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  max-width: var(--ancho-modal);
+  margin-top: var(--e-6);
+  padding: var(--e-4);
+  border: var(--separador-fuerte);
+  border-radius: var(--radio);
+}
+
+/* -------------------------------------------- Conteo por denominacion */
+
+.conteo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  max-width: var(--ancho-modal);
+  margin: var(--e-4) 0;
+}
+
+.conteo__fila {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: center;
+  gap: var(--e-3);
+}
+
+.conteo__denominacion,
+.conteo__cantidad,
+.conteo__subtotal {
+  text-align: right;
+}
+
+.conteo__subtotal { color: var(--texto-secundario); }
+
+/* El total de LO CONTADO. Grande a proposito: es el numero con el que ella
+   verifica que digito bien los once campos, y es suyo, no del sistema. */
+.conteo__total {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  max-width: var(--ancho-modal);
+  padding-top: var(--e-3);
+  border-top: var(--separador-fuerte);
+  text-align: right;
+}
+
+.conteo__cifra { font-size: var(--texto-2xl); }
+
+/* ------------------------------------------------------------- Arqueo */
+
+.arqueo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  max-width: var(--ancho-formulario);
+  margin: var(--e-6) 0;
+}
+
+.arqueo__linea {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--e-4);
+}
+
+/* La diferencia es un hecho, no una acusacion: sin fondo de alarma, sin icono,
+   sin rol de alerta. Lo unico que cambia es el color del numero, y eso solo
+   para distinguir sobrante de faltante, que si es informacion util. */
+.arqueo__diferencia {
+  padding-top: var(--e-2);
+  border-top: var(--separador-fuerte);
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-fuerte);
+}
+
+.arqueo__diferencia--favor  { color: var(--diferencia-favor); }
+.arqueo__diferencia--contra { color: var(--diferencia-contra); }
+.arqueo__diferencia--neutro { color: var(--texto-secundario); }

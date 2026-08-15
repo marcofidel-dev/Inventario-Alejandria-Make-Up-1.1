@@ -39,7 +39,6 @@ const SECCIONES = [
     texto: 'Caja',
     icono: Wallet,
     permiso: PERMISOS.operarCaja,
-    proximamente: 'La pantalla de caja llega en la fase siguiente.',
   },
   {
     id: 'catalogo',

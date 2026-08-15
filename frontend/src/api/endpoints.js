@@ -78,8 +78,50 @@ export const compras = {
   anular: (id, motivo) => api.post(`/api/v1/compras/${id}/anulacion`, { motivo }),
 }
 
+/**
+ * Quita el monto de un movimiento de caja. LA LINEA MAS IMPORTANTE DE ESTE ARCHIVO.
+ *
+ * Con la sesion ABIERTA, base inicial + suma de movimientos ES el efectivo esperado.
+ * El backend se cuida de no publicar la base —SesionDto.Abierta ni siquiera tiene
+ * campo donde ponerla— pero el front SI la conoce: el mismo la escribio al abrir la
+ * caja. Una lista que acumule los montos reconstruye al centavo el numero que el
+ * cierre a ciegas existe para ocultar, y quien cuenta sabiendo el resultado esperado
+ * cuenta hasta que le cuadre.
+ *
+ * Se descarta AQUI, en el limite, y no al pintar. Asi la pantalla no puede filtrarlo
+ * aunque quiera, porque nunca lo ve. Si en cambio se dejara pasar y se omitiera en el
+ * JSX, bastaria con que alguien agregue una columna "para verificar" —o un
+ * console.log— y la fuga vuelve sin que nadie lo note mirando la pantalla.
+ */
+const sinMonto = ({ monto, ...resto }) => resto
+
 export const caja = {
   /** Da 404 cuando no hay ninguna sesion abierta, que no es un error sino un estado. */
   sesionActual: () => api.get('/api/v1/caja/sesiones/actual'),
-  registrarMovimiento: (datos) => api.post('/api/v1/caja/movimientos', datos),
+
+  /** Da 409 cuando ya hay una sesion abierta: entonces no hay base que sugerir. */
+  sugerenciaDeApertura: () => api.get('/api/v1/caja/sesiones/sugerencia-apertura'),
+
+  abrir: (baseInicial) => api.post('/api/v1/caja/sesiones', { baseInicial }),
+
+  /** El historial ya viene filtrado por permiso: la EMPLEADA solo recibe las suyas. */
+  listar: () => api.get('/api/v1/caja/sesiones'),
+
+  movimientos: async (sesionId) =>
+    (await api.get(`/api/v1/caja/sesiones/${sesionId}/movimientos`)).map(sinMonto),
+
+  /** La respuesta se devuelve SIN monto: lo que se envio no vuelve a la pantalla. */
+  registrarMovimiento: async (datos) =>
+    sinMonto(await api.post('/api/v1/caja/movimientos', datos)),
+
+  /**
+   * El conteo fisico y el cierre son la misma llamada, y por eso el cierre es
+   * ciego: no hay un paso previo donde el sistema pueda mostrar el esperado. La
+   * respuesta —{sesion, ventasPorMetodo}— es la primera y unica vez que aparecen
+   * esperado, contado y diferencia.
+   */
+  cerrar: (sesionId, datos) => api.post(`/api/v1/caja/sesiones/${sesionId}/cierre`, datos),
+
+  notas: (sesionId) => api.get(`/api/v1/caja/sesiones/${sesionId}/notas`),
+  anotar: (sesionId, texto) => api.post(`/api/v1/caja/sesiones/${sesionId}/notas`, { texto }),
 }

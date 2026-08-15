@@ -24,6 +24,7 @@ public final class PermisosPorRol {
     private static final Set<Permiso> DE_EMPLEADA = Collections.unmodifiableSet(EnumSet.of(
             Permiso.OPERAR_CAJA,
             Permiso.REGISTRAR_MOVIMIENTO_CAJA,
+            Permiso.REGISTRAR_VENTAS,
             Permiso.RESPALDAR));
 
     /** La DUENA puede todo, incluido cualquier permiso que se agregue mañana. */

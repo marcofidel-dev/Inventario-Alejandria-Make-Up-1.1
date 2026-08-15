@@ -122,23 +122,28 @@ class CatalogoCompletoTest {
     }
 
     /**
-     * La que nadie ve venir: una variante sin ningún movimiento no aparece en el
-     * {@code GROUP BY} del stock, y si el mapeo se limitara a copiar lo que salió de la
-     * consulta, esa variante desaparecería del catálogo. En el mostrador eso significa
-     * un producto que existe, que se puede vender, y que no está en la pantalla.
+     * Agotada y nunca recibida dan el mismo stock 0 y no son lo mismo: la segunda no
+     * tiene costo real, y venderla congelaría costo 0 en la {@code VentaItem}. El
+     * número no puede distinguirlas, así que la distinción viaja en
+     * {@code conHistorial}, y es lo que el front usa para no listarla ni en el
+     * catálogo ni en el buscador de venta.
+     *
+     * <p>La variante sin movimientos sigue viajando en la respuesta a propósito: las
+     * dos pantallas por donde entra la mercancía —registrar una compra y la carga
+     * inicial— acaban de crearla y tienen que poder elegirla. Si el servidor la
+     * escondiera, la carga inicial se quedaría sin nada que cargar.
      */
     @Test
-    void unaVarianteSinMovimientosSaleConStockCeroYNoAusente() {
-        CatalogoDto catalogo = servicioCatalogo.completo();
+    void laVarianteSinMovimientosVieneMarcadaSinHistorial() {
+        System.out.println("VERIFICACION conHistorial => con movimientos: "
+                + variante(idConMovimientos).conHistorial() + ", sin movimientos: "
+                + variante(idSinMovimientos).conHistorial());
 
-        System.out.println("VERIFICACION variante sin movimientos => presente: "
-                + catalogo.variantes().stream().anyMatch(v -> v.id().equals(idSinMovimientos))
-                + ", stock: " + variante(idSinMovimientos).stock());
-
-        assertThat(catalogo.variantes())
-                .withFailMessage("La variante sin movimientos desapareció del catálogo")
-                .anyMatch(v -> v.id().equals(idSinMovimientos));
+        assertThat(variante(idSinMovimientos).conHistorial())
+                .withFailMessage("Una variante sin ningún movimiento se marcó como con historial")
+                .isFalse();
         assertThat(variante(idSinMovimientos).stock()).isZero();
+        assertThat(variante(idConMovimientos).conHistorial()).isTrue();
     }
 
     @Test

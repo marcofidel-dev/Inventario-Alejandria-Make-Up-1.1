@@ -229,6 +229,12 @@ class CajaHttpTest {
 
         System.out.println("VERIFICACION cierre => " + respuesta.estado() + " " + respuesta.cuerpo());
         assertThat(respuesta.estado()).isEqualTo(200);
+        // La respuesta del cierre es un ArqueoDto: la sesión anidada más el desglose
+        // por método de pago, que es el único sitio del sistema donde aparece. Va
+        // vacío mientras no haya ventas.
+        assertThat(respuesta.cuerpo())
+                .contains("\"sesion\":{")
+                .contains("\"ventasPorMetodo\":[]");
         assertThat(respuesta.cuerpo())
                 .contains("\"estado\":\"CERRADA\"")
                 .contains("\"efectivoEsperado\":" + ESPERADO)
@@ -320,6 +326,65 @@ class CajaHttpTest {
             System.out.println("VERIFICACION respaldos tras el cierre => " + respaldos);
             assertThat(respaldos).isNotEmpty();
         }
+    }
+
+    // ------------------------------------------------------- notas de sesión
+
+    /**
+     * La explicación de la diferencia llega <strong>después</strong> de conocerla, y
+     * eso es todo el punto: {@code observaciones} viajaba dentro de la petición de
+     * cierre, o sea antes de que existiera nada que explicar.
+     *
+     * <p>Que se pueda anotar sobre una sesión ya cerrada no contradice su
+     * inmutabilidad: la nota es una fila nueva en otra tabla. Lo que se comprueba
+     * aquí es justamente eso — los tres valores congelados siguen exactamente donde
+     * estaban después de anotar.
+     */
+    @Test
+    @Order(19)
+    void seAnotaSobreUnaSesionYaCerradaSinTocarSusMontos() {
+        Respuesta nota = duena.post("/api/v1/caja/sesiones/" + idSesion + "/notas",
+                "{\"texto\":\"Faltó registrar un domicilio de la tarde\"}");
+
+        System.out.println("VERIFICACION nota sobre sesión cerrada => " + nota.estado()
+                + " " + nota.cuerpo());
+        assertThat(nota.estado()).isEqualTo(201);
+        assertThat(nota.cuerpo())
+                .contains("Faltó registrar un domicilio")
+                .contains("\"usuario\":\"Alejandra\"");
+
+        Respuesta sesion = duena.get("/api/v1/caja/sesiones/" + idSesion);
+        System.out.println("VERIFICACION la sesión tras anotar => " + sesion.cuerpo());
+        assertThat(sesion.cuerpo())
+                .contains("\"efectivoEsperado\":" + ESPERADO)
+                .contains("\"efectivoContado\":" + CONTADO)
+                .contains("\"diferencia\":" + DIFERENCIA)
+                .contains("Faltó registrar un domicilio");
+    }
+
+    /** Anotar sigue la misma regla que ver: no se explica lo que no se puede leer. */
+    @Test
+    @Order(20)
+    void laEmpleadaNoAnotaSobreLaSesionCerradaDeLaDuena() {
+        Respuesta respuesta = empleada.post("/api/v1/caja/sesiones/" + idSesion + "/notas",
+                "{\"texto\":\"no debería poder\"}");
+
+        System.out.println("VERIFICACION EMPLEADA anotando sesión ajena => " + respuesta.estado()
+                + " " + respuesta.cuerpo());
+        assertThat(respuesta.estado()).isEqualTo(403);
+        assertThat(respuesta.cuerpo()).contains("SIN_PERMISO");
+    }
+
+    @Test
+    @Order(21)
+    void unaNotaVaciaNoPasa() {
+        Respuesta respuesta = duena.post("/api/v1/caja/sesiones/" + idSesion + "/notas",
+                "{\"texto\":\"   \"}");
+
+        System.out.println("VERIFICACION nota vacía => " + respuesta.estado()
+                + " " + respuesta.cuerpo());
+        assertThat(respuesta.estado()).isEqualTo(400);
+        assertThat(respuesta.cuerpo()).contains("VALIDACION_FALLIDA");
     }
 
     private Respuesta movimiento(ClienteHttpDePrueba cliente, String tipo, long monto, String concepto) {

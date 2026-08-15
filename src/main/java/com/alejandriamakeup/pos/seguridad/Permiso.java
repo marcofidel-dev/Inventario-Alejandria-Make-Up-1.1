@@ -40,7 +40,17 @@ public enum Permiso {
      */
     CARGAR_INVENTARIO_INICIAL,
 
-    /** Anular una venta ya registrada. */
+    /**
+     * Cobrar en el punto de venta y consultar una venta. Es el trabajo de la EMPLEADA:
+     * si no lo tuviera, no habría quien atendiera el mostrador.
+     */
+    REGISTRAR_VENTAS,
+
+    /**
+     * Anular una venta ya registrada. Aparte de {@link #REGISTRAR_VENTAS} porque
+     * deshacer y hacer no son la misma capacidad: anular devuelve inventario y saca
+     * plata del cajón del día, sobre una venta que puede ser de otra persona.
+     */
     ANULAR_VENTAS,
 
     /** Crear, editar y desactivar proveedores. */

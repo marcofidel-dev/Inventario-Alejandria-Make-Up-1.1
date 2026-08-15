@@ -14,11 +14,23 @@ vi.mock('../src/sesion/SesionContext.jsx', async (importarReal) => ({
 }))
 
 const { Catalogo } = await import('../src/pantallas/Catalogo.jsx')
+const { BuscadorDeVariante } = await import('../src/componentes/BuscadorDeVariante.jsx')
 const { useCatalogo } = await import('../src/catalogo/useCatalogo.js')
 
 /** La pantalla con su hook real: el filtrado que se prueba es el que corre en la tienda. */
-function PantallaCatalogo() {
-  return <Catalogo catalogo={useCatalogo()} />
+function PantallaCatalogo({ alIrA }) {
+  return <Catalogo catalogo={useCatalogo()} alIrA={alIrA} />
+}
+
+/**
+ * El buscador alimentado con la MISMA lista que va a usar el POS: `catalogo.filas`.
+ * Lo que se prueba no es el filtro por texto —eso ya tiene su prueba— sino de que
+ * lista se sirve, que es la decision que se puede revertir sin que se note.
+ */
+function BuscadorDeVenta() {
+  const catalogo = useCatalogo()
+  return <BuscadorDeVariante filas={catalogo.filas} valor="" indice={0}
+                             etiqueta="Producto" alElegir={() => {}} />
 }
 
 async function montar(datos = catalogoDePrueba()) {
@@ -104,12 +116,72 @@ describe('Catálogo', () => {
     expect(within(baja).getByText('bajo')).toBeInTheDocument()
   })
 
-  it('con el catálogo vacío dice qué hacer primero, no que está vacío', async () => {
-    await montar(CATALOGO_VACIO)
+  /**
+   * Una variante sin ningun movimiento es un registro sobre nada: se creo dentro de
+   * un borrador de compra que todavia no llego, o de uno que se descarto. Listarla
+   * ofrece vender algo que nunca entro y sin costo real, y esa venta congelaria
+   * costo 0 en la VentaItem: el margen historico queda corrompido para siempre y no
+   * hay pantalla donde eso se vea.
+   */
+  it('una variante sin historial no se lista', async () => {
+    await montar()
 
-    expect(screen.getByText('Empecemos por el primer producto')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Crear el primer producto/ })).toBeInTheDocument()
+    expect(filas()).toHaveLength(3)
+    expect(screen.queryByText('Coral pendiente')).not.toBeInTheDocument()
+    // Ni siquiera cuenta en el total: "3 de 4" delataria que existe.
+    expect(screen.getByRole('status')).toHaveTextContent('3 de 3 variantes')
+  })
+
+  it('tampoco la sugiere el buscador, que es por donde se vendería', async () => {
+    const usuario = userEvent.setup()
+    vi.stubGlobal('fetch', fetchFalso({ '/api/v1/catalogo': { cuerpo: catalogoDePrueba() } }))
+    render(<BuscadorDeVenta />)
+
+    const entrada = await screen.findByRole('combobox')
+    await usuario.type(entrada, 'coral')
+    expect(screen.getByText('Ningún producto coincide.')).toBeInTheDocument()
+
+    // Y con una que si tiene historial el buscador funciona: la prueba anterior
+    // pasaria igual si el buscador estuviera roto del todo.
+    await usuario.clear(entrada)
+    await usuario.type(entrada, 'carmín')
+    expect(screen.getByRole('option', { name: /Rojo carmín/ })).toBeInTheDocument()
+  })
+
+  /**
+   * Desde aqui no nace ningun producto: nacen donde entra mercancia con un costo.
+   * El estado vacio tiene que decir eso y llevar a los dos sitios, no dejar a
+   * alguien buscando en el menu.
+   */
+  it('con el catálogo vacío manda a las dos pantallas por donde entra la mercancía', async () => {
+    const usuario = userEvent.setup()
+    const irA = vi.fn()
+    vi.stubGlobal('fetch', fetchFalso({ '/api/v1/catalogo': { cuerpo: CATALOGO_VACIO } }))
+    render(<PantallaCatalogo alIrA={irA} />)
+    await screen.findByRole('heading', { name: 'Catálogo' })
+
+    expect(screen.getByText('Todavía no hay productos con existencias')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Crear el primer producto/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
+
+    await usuario.click(screen.getByRole('button', { name: 'Registrar una compra' }))
+    expect(irA).toHaveBeenCalledWith({ seccion: 'compras', pestana: 'compras' })
+
+    await usuario.click(screen.getByRole('button', { name: 'Hacer la carga inicial' }))
+    expect(irA).toHaveBeenCalledWith({ seccion: 'inventario', pestana: 'carga-inicial' })
+  })
+
+  /**
+   * El catalogo administra lo que ya existe. Los POST siguen en el backend porque
+   * los usa el flujo de compra; lo que no puede volver es la entrada desde aqui.
+   */
+  it('no ofrece crear productos ni variantes, ni siquiera a la DUEÑA', async () => {
+    await montar()
+
+    expect(screen.queryByRole('button', { name: /Nuevo producto/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Nueva variante/ })).not.toBeInTheDocument()
+    // Editar si: los precios cambian sin que haya una compra de por medio.
+    expect(screen.getAllByRole('button', { name: /^Editar/ }).length).toBeGreaterThan(0)
   })
 
   it('sin servidor, lo dice y ofrece reintentar', async () => {
@@ -163,8 +235,6 @@ describe('Catálogo', () => {
     it('no ofrece editar el catálogo', async () => {
       await montar()
 
-      expect(screen.queryByRole('button', { name: /Nuevo producto/ })).not.toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: /Nueva variante/ })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /^Editar/ })).not.toBeInTheDocument()
     })
   })

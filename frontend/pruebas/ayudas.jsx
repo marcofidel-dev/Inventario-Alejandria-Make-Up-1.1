@@ -23,6 +23,11 @@ export function catalogoDePrueba(ajustes = {}) {
       variante({ id: 1000, productoId: 100, tono: 'Rojo carmín', precioVenta: 32000, stock: 7 }),
       variante({ id: 1001, productoId: 100, tono: 'Nude', precioVenta: 32000, stock: 1, stockMinimo: 3 }),
       variante({ id: 1002, productoId: 101, tono: null, tamano: '9 ml', precioVenta: 45000, stock: 0 }),
+      // Sin historial: creada dentro de un borrador de compra que todavia no llega.
+      // Va en el fixture compartido a proposito — el backend SI la manda, y una
+      // prueba que afirme que no se lista no demuestra nada si nunca estuvo.
+      variante({ id: 1003, productoId: 100, tono: 'Coral pendiente', precioVenta: 32000,
+        stock: 0, conHistorial: false }),
     ],
     ...ajustes,
   }
@@ -38,6 +43,7 @@ export function variante(campos) {
     precioVenta: 10000,
     stockMinimo: 0,
     stock: 0,
+    conHistorial: true,
     fechaVencimiento: null,
     paoMeses: null,
     activo: true,
@@ -110,6 +116,68 @@ export function compra(campos) {
     fechaBaja: null,
     motivoBaja: null,
     items: [{ id: 1, varianteId: 1000, cantidad: 2, costoUnitario: 5000, subtotal: 10000 }],
+    ...campos,
+  }
+}
+
+/**
+ * Una sesion abierta con la forma de SesionDto.Abierta.
+ *
+ * NO TIENE baseInicial NI efectivoEsperado, y no es que vayan en null: el record del
+ * backend no tiene esos campos. El fixture copia esa forma exacta porque si los
+ * inventara, las pruebas estarian afirmando cosas sobre una API que no existe.
+ */
+export function sesionAbierta(ajustes = {}) {
+  return {
+    id: 42,
+    consecutivo: 'C-000042',
+    estado: 'ABIERTA',
+    fechaApertura: '2026-08-13T08:12:00',
+    usuarioApertura: 'Camila',
+    cantidadDeMovimientos: 0,
+    esDeUnDiaAnterior: false,
+    ...ajustes,
+  }
+}
+
+/** Una sesion cerrada con la forma de SesionDto.Cerrada. */
+export function sesionCerrada(ajustes = {}) {
+  return {
+    id: 41,
+    consecutivo: 'C-000041',
+    estado: 'CERRADA',
+    fechaApertura: '2026-08-12T08:00:00',
+    fechaCierre: '2026-08-12T20:05:00',
+    usuarioApertura: 'Camila',
+    usuarioCierre: 'Camila',
+    baseInicial: 200000,
+    efectivoEsperado: 292700,
+    efectivoContado: 292700,
+    diferencia: 0,
+    montoRetirado: 250000,
+    baseSiguiente: null,
+    observaciones: null,
+    notas: [],
+    ...ajustes,
+  }
+}
+
+/**
+ * Un movimiento con la forma de MovimientoCajaDto, CON SU MONTO.
+ *
+ * El monto va aqui a proposito: el backend si lo manda, y una prueba que afirme que
+ * no aparece en pantalla no demuestra nada si el fixture nunca lo tuvo. Lo que se
+ * comprueba es que api/endpoints.js lo descarta en el limite.
+ */
+export function movimientoDePrueba(campos) {
+  return {
+    id: 1,
+    tipo: 'RETIRO',
+    monto: -50000,
+    concepto: 'Consignación',
+    fecha: '2026-08-13T08:40:00',
+    usuario: 'Camila',
+    ventaId: null,
     ...campos,
   }
 }

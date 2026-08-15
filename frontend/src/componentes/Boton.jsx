@@ -1,5 +1,12 @@
+import { forwardRef } from 'react'
+
 /**
  * Un boton.
+ *
+ * Reenvia el ref al <button> de verdad. Hace falta para encadenar el foco: en el
+ * contador de denominaciones, Enter en el ultimo campo tiene que llevar al boton de
+ * continuar, y sin forwardRef un ref sobre un componente de funcion no llega a
+ * ninguna parte y ademas React lo avisa por consola.
  *
  * `ocupado` lo deshabilita y cambia su texto. No es cosmetica: sin eso, dos
  * clics seguidos en "Guardar" crean dos marcas, o dos cargas iniciales de las
@@ -13,7 +20,7 @@
  * pedirle una excepcion a la regla, el boton lo dice con palabras, que ademas se
  * lee sin interpretar.
  */
-export function Boton({
+export const Boton = forwardRef(function Boton({
   variante = 'normal',
   ocupado = false,
   textoOcupado,
@@ -21,12 +28,13 @@ export function Boton({
   children,
   disabled,
   ...resto
-}) {
+}, ref) {
   const clases = ['boton']
   if (variante !== 'normal') clases.push(`boton--${variante}`)
 
   return (
     <button
+      ref={ref}
       type="button"
       className={clases.join(' ')}
       disabled={disabled || ocupado}
@@ -37,4 +45,4 @@ export function Boton({
       {ocupado ? (textoOcupado ?? 'Guardando…') : children}
     </button>
   )
-}
+})

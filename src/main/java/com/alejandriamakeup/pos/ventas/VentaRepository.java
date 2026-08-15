@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface VentaRepository extends JpaRepository<Venta, Long> {
 
@@ -24,4 +26,22 @@ public interface VentaRepository extends JpaRepository<Venta, Long> {
      * ordenar cronológicamente.
      */
     List<Venta> findByFechaBetweenOrderByFechaAsc(LocalDateTime desde, LocalDateTime hasta);
+
+    /**
+     * El desglose por método de pago de una sesión, para el cierre.
+     *
+     * <p>Solo las {@code COMPLETADA}: una venta anulada ya devolvió su plata con un
+     * movimiento de caja de signo contrario, así que contarla aquí la sumaría dos
+     * veces y el desglose no cuadraría con el efectivo esperado.
+     */
+    @Query("""
+            select new com.alejandriamakeup.pos.ventas.VentasPorMetodo(
+                       v.metodoPago, count(v), coalesce(sum(v.total), 0))
+            from Venta v
+            where v.sesionCaja.id = :sesionId
+              and v.estado = com.alejandriamakeup.pos.ventas.EstadoVenta.COMPLETADA
+            group by v.metodoPago
+            order by v.metodoPago
+            """)
+    List<VentasPorMetodo> desglosePorMetodo(@Param("sesionId") Long sesionId);
 }

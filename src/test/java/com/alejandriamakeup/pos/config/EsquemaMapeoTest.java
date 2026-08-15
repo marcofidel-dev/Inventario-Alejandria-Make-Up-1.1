@@ -42,7 +42,9 @@ class EsquemaMapeoTest {
             "Proveedor", "Compra", "CompraItem", "SesionCaja", "ConteoDenominacion",
             "Venta", "VentaItem", "MovimientoInventario", "MovimientoCaja", "Consecutivo",
             // V3, Fase 2
-            "IntentoLogin");
+            "IntentoLogin",
+            // V6, Fase 7: las explicaciones de un arqueo se agregan, no editan la sesión
+            "NotaSesionCaja");
 
     @PersistenceContext
     private EntityManager entityManager;

@@ -24,6 +24,22 @@ flotante.
 - `MovimientoInventario` y `MovimientoCaja` son **append-only**. Nunca `UPDATE`,
   nunca `DELETE`. Un error se corrige con un movimiento de ajuste.
 
+### Catálogo
+- **Los productos y variantes se crean únicamente al registrar una compra o en la
+  carga inicial. El catálogo administra existentes: precio, stock mínimo, activación
+  y correcciones. Nunca crea.** Un producto sin costo real permite congelar costo 0
+  en una venta y corromper el margen histórico.
+- El catálogo **solo lista variantes con historial** — al menos un movimiento en el
+  ledger. Una variante creada dentro de un borrador de compra no aparece hasta que la
+  compra se recibe, y si el borrador se descarta no aparece nunca. Lo mismo vale para
+  el buscador del POS: no se puede vender lo que nunca entró.
+- Agotada y nunca recibida dan **las dos stock 0**, y el número no las distingue: la
+  distinción viaja en `VarianteDto.conHistorial`. En el front, `catalogo.filas` es la
+  lista corta —la de las pantallas que muestran y venden— y `catalogo.todas` la
+  excepción, solo para las dos pantallas por donde entra la mercancía y para nombrar
+  una variante ya referenciada por una compra. Los `POST` del backend se quedan: los
+  usa el flujo de compra.
+
 ### Ventas
 - `VentaItem` congela precio, costo y descripción al momento de la venta. Sin
   eso, cambiar un precio corrompe retroactivamente todas las métricas históricas.
@@ -60,9 +76,29 @@ flotante.
 
 ### Caja
 - **Cierre a ciegas**: primero se ingresa el conteo físico, y solo después el
-  sistema revela esperado y diferencia. Nunca al revés.
-- Una sesión cerrada es inmutable. Una devolución sobre una sesión cerrada
-  golpea la sesión actual.
+  sistema revela esperado y diferencia. Nunca al revés. El conteo y el cierre son
+  **la misma llamada**: no hay un paso previo donde el sistema pueda adelantar el
+  esperado, porque no existe el endpoint que lo daría.
+- **El front descarta el monto de los movimientos en el límite de la API**
+  (`api/endpoints.js`), no al pintar. El backend oculta la base inicial, pero el
+  front la conoce —él mismo la envió al abrir— y una lista que acumule los montos
+  reconstruye el esperado al centavo. Descartarlo en el límite hace que la pantalla
+  no pueda filtrarlo aunque quiera: nunca lo ve.
+- **Una sesión cerrada es inmutable**: sus montos, fechas y usuarios no se modifican
+  nunca. Las explicaciones se agregan como notas append-only en `nota_sesion_caja`,
+  jamás editando la sesión. `sesion_caja.observaciones` quedó **en desuso** desde V6:
+  viajaba dentro de `CerrarSesionPeticion`, o sea antes de saber si había algo que
+  observar, y para cuando se sabe la sesión ya está cerrada.
+- **La nota no es obligatoria y se pide después de revelar la diferencia.** Pedirla
+  antes captura ruido —se escribe "normal" y luego aparece el faltante—, y un campo
+  obligatorio que casi siempre sobra deja de leerse en serio justo el día que
+  importa. El historial marca "sin explicar" la sesión con diferencia y sin notas:
+  rendición de cuentas visible, sin obligar a nadie a rellenar.
+- La diferencia se presenta **como un hecho, no como una acusación**: sin fondo de
+  alarma, sin `role="alert"`, sin lenguaje de error. Sobrante y faltante sí se
+  distinguen (`--diferencia-favor` / `--diferencia-contra`), porque eso cambia qué
+  hay que buscar.
+- Una devolución sobre una sesión cerrada golpea la sesión actual.
 
 ### Recibos
 - El PDF dice **"RECIBO"** o **"COMPROBANTE DE VENTA"**. Nunca "FACTURA": no

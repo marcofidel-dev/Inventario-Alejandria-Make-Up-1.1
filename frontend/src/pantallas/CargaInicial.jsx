@@ -7,6 +7,8 @@ import { Aviso, AvisoDeError } from '../componentes/Aviso.jsx'
 import { Boton } from '../componentes/Boton.jsx'
 import { Campo } from '../componentes/Campo.jsx'
 import { formatearPesos } from './Catalogo.jsx'
+import { FormularioProducto } from './FormularioProducto.jsx'
+import { FormularioVariante } from './FormularioVariante.jsx'
 
 /**
  * Carga inicial de existencias: la pantalla con la que se va a meter el inventario
@@ -18,6 +20,11 @@ import { formatearPesos } from './Catalogo.jsx'
  * puede estar alternando entre teclado y raton en cada uno: eso no es incomodidad,
  * son horas.
  *
+ * ES UNO DE LOS DOS SITIOS DONDE NACE UN PRODUCTO —el otro es registrar una compra—
+ * porque aqui entra mercancia fisica con su costo. De ahi el alta encadenada
+ * producto -> variante: el catalogo ya no crea nada, y sin esto la unica forma de
+ * meter el inventario que ya esta en la tienda seria inventar una compra.
+ *
  * El lote se envia completo al final porque el backend es todo-o-nada. Si una
  * linea falla, se marca ESA linea y no se pierde el trabajo: volver a teclear
  * cuarenta lineas por un error en la treinta y ocho seria imperdonable.
@@ -27,9 +34,12 @@ export function CargaInicial({ catalogo }) {
   const [error, setError] = useState(null)
   const [resultado, setResultado] = useState(null)
   const [enviando, setEnviando] = useState(false)
+  const [formulario, setFormulario] = useState(null)
   const contenedor = useRef(null)
 
-  const variantesSinCarga = catalogo.filas
+  // `todas` y no `filas`: aqui se elige justamente lo que todavia no tiene ningun
+  // movimiento. La lista corta del catalogo dejaria el desplegable vacio.
+  const variantesSinCarga = catalogo.todas
 
   const actualizar = useCallback((indice, cambios) => {
     setLineas((actuales) => actuales.map((linea, i) => (
@@ -191,6 +201,9 @@ export function CargaInicial({ catalogo }) {
       <div className="carga__pie">
         <div>
           <Boton icono={Plus} onClick={agregarLinea}>Agregar línea</Boton>
+          <Boton icono={Plus} onClick={() => setFormulario({ paso: 'producto' })}>
+            El producto no está en el catálogo
+          </Boton>
           <p className="carga__pista">
             Tab pasa al campo siguiente. Enter en el costo agrega otra línea.
           </p>
@@ -200,6 +213,28 @@ export function CargaInicial({ catalogo }) {
           Cargar {completas.length} línea(s)
         </Boton>
       </div>
+
+      {formulario?.paso === 'producto' && (
+        <FormularioProducto
+          catalogo={catalogo}
+          alCerrar={() => setFormulario(null)}
+          alGuardar={async (producto) => {
+            await catalogo.recargar()
+            // Un producto sin variantes no se puede cargar: el segundo paso no es
+            // opcional, asi que se encadena en vez de ofrecerse.
+            setFormulario({ paso: 'variante', producto })
+          }}
+        />
+      )}
+
+      {formulario?.paso === 'variante' && (
+        <FormularioVariante
+          catalogo={catalogo}
+          productoInicial={formulario.producto}
+          alCerrar={() => setFormulario(null)}
+          alGuardar={async () => { await catalogo.recargar(); setFormulario(null) }}
+        />
+      )}
     </>
   )
 }

@@ -35,11 +35,12 @@ export function useCatalogo() {
   }, [recargar])
 
   /**
-   * Una fila por variante, ya unida con su producto, marca y categoria, y con la
-   * clave de busqueda calculada una sola vez. Recalcularla en cada tecla seria
-   * hacer el mismo trabajo cincuenta veces por palabra escrita.
+   * Una fila por variante —TODAS, tengan historial o no—, ya unida con su producto,
+   * marca y categoria, y con la clave de busqueda calculada una sola vez.
+   * Recalcularla en cada tecla seria hacer el mismo trabajo cincuenta veces por
+   * palabra escrita.
    */
-  const filas = useMemo(() => {
+  const todas = useMemo(() => {
     if (!datos) return []
 
     const marcas = new Map(datos.marcas.map((m) => [m.id, m]))
@@ -76,6 +77,21 @@ export function useCatalogo() {
     })
   }, [datos])
 
+  /**
+   * Las variantes que de verdad existen: las que tienen al menos un movimiento.
+   *
+   * Una variante sin historial es un registro sobre nada — se creo dentro de un
+   * borrador de compra que todavia no llego, o de uno que se descarto. No se lista
+   * en el catalogo ni se puede vender: sin costo real, la venta congelaria costo 0
+   * y el margen historico queda corrompido para siempre.
+   *
+   * ESTA es la lista por defecto, y la que tiene que usar el buscador del POS. La
+   * completa (`todas`) es la excepcion, y solo para las dos pantallas por donde
+   * entra la mercancia y para resolver el nombre de una variante ya referenciada
+   * por una compra.
+   */
+  const filas = useMemo(() => todas.filter((fila) => fila.conHistorial), [todas])
+
   return {
     cargando,
     error,
@@ -84,7 +100,8 @@ export function useCatalogo() {
     categorias: datos?.categorias ?? [],
     productos: datos?.productos ?? [],
     filas,
-    estaVacio: Boolean(datos) && datos.marcas.length === 0 && datos.productos.length === 0,
+    todas,
+    estaVacio: Boolean(datos) && filas.length === 0,
   }
 }
 

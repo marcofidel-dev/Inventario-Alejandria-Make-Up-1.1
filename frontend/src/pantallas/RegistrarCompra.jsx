@@ -147,8 +147,11 @@ export function RegistrarCompra({ catalogo, compras, alCerrar, alRecibir }) {
             {lineas.map((linea, indice) => (
               <tr key={linea.clave}>
                 <td>
+                  {/* `todas` y no `filas`: una variante recien creada aqui no tiene
+                      ningun movimiento todavia —la mercancia esta llegando— y aun asi
+                      hay que poder ponerla en la factura. */}
                   <BuscadorDeVariante
-                    filas={catalogo.filas}
+                    filas={catalogo.todas}
                     valor={linea.varianteId}
                     indice={indice}
                     error={linea.error}

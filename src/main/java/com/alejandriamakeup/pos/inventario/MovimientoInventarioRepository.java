@@ -72,4 +72,11 @@ public interface MovimientoInventarioRepository extends JpaRepository<Movimiento
      * se está corrigiendo lo que se contó.
      */
     boolean existsByVarianteIdAndTipo(Long varianteId, TipoMovimientoInventario tipo);
+
+    /**
+     * Si la variante tiene algún movimiento, o sea si alguna vez entró mercancía.
+     * Es lo que separa "agotada" de "nunca existió de verdad": el catálogo solo lista
+     * las primeras.
+     */
+    boolean existsByVarianteId(Long varianteId);
 }

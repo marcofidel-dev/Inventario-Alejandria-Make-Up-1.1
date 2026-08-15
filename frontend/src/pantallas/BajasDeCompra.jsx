@@ -156,7 +156,9 @@ export function AnularCompra({ compra, catalogo, alCerrar, alHecho }) {
   )
 }
 
+// Sobre `todas`: nombrar la variante de una compra no depende de que ya tenga
+// movimientos. Un borrador que se descarta se refiere justamente a las que no.
 function describir(catalogo, varianteId) {
-  const fila = catalogo.filas.find((f) => String(f.id) === String(varianteId))
+  const fila = catalogo.todas.find((f) => String(f.id) === String(varianteId))
   return fila ? descripcionDe(fila) : `Variante ${varianteId}`
 }

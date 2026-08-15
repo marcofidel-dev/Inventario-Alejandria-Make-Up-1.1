@@ -69,6 +69,11 @@ public class ReglasDeAcceso {
         requiere(HttpMethod.POST, "/api/v1/caja/sesiones/{id}/cierre", Permiso.OPERAR_CAJA);
         requiere(HttpMethod.POST, "/api/v1/caja/movimientos", Permiso.REGISTRAR_MOVIMIENTO_CAJA);
 
+        // Anotar una sesión no cambia ningún monto: agrega una explicación firmada.
+        // Basta con poder operar caja, y de quién es la sesión se encarga el servicio.
+        requiere(HttpMethod.GET, "/api/v1/caja/sesiones/{id}/notas", Permiso.OPERAR_CAJA);
+        requiere(HttpMethod.POST, "/api/v1/caja/sesiones/{id}/notas", Permiso.OPERAR_CAJA);
+
         // --- Catálogo --------------------------------------------------------
         // La lectura del catálogo la necesita el punto de venta, así que basta con
         // estar autenticado. Los costos van aparte, con su propio permiso.
@@ -124,6 +129,15 @@ public class ReglasDeAcceso {
         // Anular puede dejar variantes en stock negativo: permiso aparte todavia.
         requiere(HttpMethod.GET, "/api/v1/compras/{id}/previa-anulacion", Permiso.ANULAR_COMPRAS);
         requiere(HttpMethod.POST, "/api/v1/compras/{id}/anulacion", Permiso.ANULAR_COMPRAS);
+
+        // --- Ventas ----------------------------------------------------------
+        // La EMPLEADA vende: es su trabajo. Lo que no hace es anular, que devuelve
+        // inventario y saca plata del cajón de hoy. Ninguna de las tres rutas se
+        // queda en autenticado(): FugaDeCostosTest barre todos los GET de la API con
+        // sesión de EMPLEADA, y venta_item guarda el costo congelado.
+        requiere(HttpMethod.POST, "/api/v1/ventas", Permiso.REGISTRAR_VENTAS);
+        requiere(HttpMethod.GET, "/api/v1/ventas/{id}", Permiso.REGISTRAR_VENTAS);
+        requiere(HttpMethod.POST, "/api/v1/ventas/{id}/anulacion", Permiso.ANULAR_VENTAS);
 
         // --- Inventario ------------------------------------------------------
         requiere(HttpMethod.POST, "/api/v1/inventario/carga-inicial", Permiso.CARGAR_INVENTARIO_INICIAL);
