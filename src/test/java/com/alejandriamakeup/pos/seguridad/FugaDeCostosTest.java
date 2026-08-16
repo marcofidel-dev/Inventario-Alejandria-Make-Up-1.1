@@ -67,6 +67,42 @@ class FugaDeCostosTest {
             "costoPromedio", "costo_promedio", "costoUnitario", "costo_unitario",
             "margen", "margenPorcentaje", "costo");
 
+    /**
+     * Banderas que nombran el costo sin publicar ninguno.
+     *
+     * <p>{@code sinCosto} es un booleano derivado de {@code costoPromedio == 0}: dice
+     * que por esa variante nunca entró mercancía valorada, no cuánto costó. El punto de
+     * venta lo necesita para rechazar la variante <em>al agregarla al carrito</em>, que
+     * es donde el rechazo no cuesta nada; sin él, el único momento de enterarse sería el
+     * 409 del cobro, con el carrito lleno y una clienta enfrente.
+     *
+     * <p>Se descuenta del barrido de <strong>palabras</strong> y solo con su valor
+     * pegado, de modo que un campo llamado {@code sinCostoPromedio} o
+     * {@code "sinCosto":777771} seguiría cayendo. El barrido de <strong>valores</strong>
+     * no se toca y corre sobre el cuerpo entero: si algún día esta bandera arrastrara un
+     * importe, el test lo vería igual.
+     */
+    private static final List<String> BANDERAS_SIN_IMPORTE = List.of(
+            "\"sinCosto\":true", "\"sinCosto\":false");
+
+    /**
+     * La única ruta que este barrido no mira, nombrada una por una y a propósito.
+     *
+     * <p>Devuelve los bytes de un PDF. Leídos como texto son basura comprimida, así que
+     * buscar "costo" ahí no probaría nada y además haría el test no determinista: una
+     * coincidencia por azar en el flujo comprimido lo pondría en rojo un día cualquiera.
+     *
+     * <p><strong>Se excluye la ruta, no el tipo de contenido.</strong> Excluir todo lo
+     * que sea {@code application/pdf} dejaría sin auditar cualquier endpoint futuro que
+     * devuelva un PDF, sin que nadie lo haya decidido. Así, el que agregue el siguiente
+     * tiene que venir aquí a escribirlo, y al escribirlo se pregunta dónde lo audita.
+     *
+     * <p>El contenido de este PDF sí se audita, sobre el texto extraído y no sobre los
+     * bytes: {@code ReciboSinCostosTest}.
+     */
+    private static final List<String> AUDITADAS_EN_OTRO_SITIO = List.of(
+            "/api/v1/ventas/{id}/recibo");
+
     @DynamicPropertySource
     static void baseAislada(DynamicPropertyRegistry registro) {
         registro.add("spring.datasource.url", () -> URL);
@@ -152,7 +188,7 @@ class FugaDeCostosTest {
 
         System.out.println("VERIFICACION barriendo " + rutas.size()
                 + " endpoints de lectura con sesión de EMPLEADA (costos " + COSTO_UNO
-                + " y " + COSTO_DOS + "):");
+                + " y " + COSTO_DOS + "), excluida " + AUDITADAS_EN_OTRO_SITIO + ":");
 
         for (String ruta : rutas) {
             Respuesta respuesta = empleada.get(ruta);
@@ -170,8 +206,13 @@ class FugaDeCostosTest {
                 continue;
             }
 
+            String sinBanderas = cuerpo;
+            for (String bandera : BANDERAS_SIN_IMPORTE) {
+                sinBanderas = sinBanderas.replace(bandera, "");
+            }
+
             for (String prohibido : PALABRAS_PROHIBIDAS) {
-                if (cuerpo.toLowerCase().contains(prohibido.toLowerCase())) {
+                if (sinBanderas.toLowerCase().contains(prohibido.toLowerCase())) {
                     fugas.add(ruta + " menciona '" + prohibido + "' => " + recortar(cuerpo));
                 }
             }
@@ -186,6 +227,32 @@ class FugaDeCostosTest {
                 .withFailMessage("Con sesión de EMPLEADA, estos endpoints muestran costos:%n%s",
                         String.join("\n", fugas))
                 .isEmpty();
+    }
+
+    /**
+     * La exclusión tiene que seguir apuntando a una ruta que existe.
+     *
+     * <p>Si mañana el recibo se sirve desde otra ruta, esta entrada queda muerta: la
+     * ruta nueva entraría al barrido —que es el lado seguro— pero la lista de
+     * excepciones diría una mentira, y una excepción que ya no excluye nada es
+     * exactamente la que nadie vuelve a revisar.
+     */
+    @Test
+    void laRutaExcluidaDelBarridoSigueExistiendo() {
+        List<String> mapeadas = new ArrayList<>();
+        mapeos.getHandlerMethods().forEach((info, handler) -> {
+            var patrones = info.getPathPatternsCondition();
+            if (patrones != null) {
+                patrones.getPatterns().forEach(p -> mapeadas.add(p.getPatternString()));
+            }
+        });
+
+        System.out.println("VERIFICACION exclusiones del barrido => " + AUDITADAS_EN_OTRO_SITIO);
+        assertThat(mapeadas)
+                .withFailMessage("La lista de rutas excluidas del barrido nombra algo que ya "
+                        + "no está mapeado: %s. Hay que borrar la entrada o corregirla.",
+                        AUDITADAS_EN_OTRO_SITIO)
+                .containsAll(AUDITADAS_EN_OTRO_SITIO);
     }
 
     /**
@@ -205,15 +272,24 @@ class FugaDeCostosTest {
                 .contains("margen");
     }
 
-    /** Y el catálogo del punto de venta no los trae ni siquiera para la dueña. */
+    /**
+     * Y el catálogo del punto de venta no los trae ni siquiera para la dueña.
+     *
+     * <p>Lo único que menciona el costo ahí es la bandera {@code sinCosto}, y se
+     * comprueba en los dos sentidos: que está —el punto de venta la necesita para
+     * rechazar al agregar al carrito— y que no arrastra ningún importe.
+     */
     @Test
     void elCatalogoDelPuntoDeVentaNoTraeCostosParaNadie() {
         Respuesta respuesta = duena.get("/api/v1/catalogo");
+        String sinBanderas = respuesta.cuerpo()
+                .replace("\"sinCosto\":true", "").replace("\"sinCosto\":false", "");
 
-        System.out.println("VERIFICACION DUENA lee el catálogo del POS => sin costos: "
-                + !respuesta.cuerpo().contains("costo"));
+        System.out.println("VERIFICACION DUENA lee el catálogo del POS => sin importes: "
+                + !sinBanderas.toLowerCase().contains("costo"));
+        assertThat(respuesta.cuerpo()).contains("\"sinCosto\":");
+        assertThat(sinBanderas.toLowerCase()).doesNotContain("costo");
         assertThat(respuesta.cuerpo())
-                .doesNotContain("costo")
                 .doesNotContain(String.valueOf(COSTO_UNO))
                 .doesNotContain(String.valueOf(COSTO_DOS));
     }
@@ -232,7 +308,7 @@ class FugaDeCostosTest {
             }
             for (var patron : patrones.getPatterns()) {
                 String ruta = patron.getPatternString();
-                if (ruta.startsWith("/api/")) {
+                if (ruta.startsWith("/api/") && !AUDITADAS_EN_OTRO_SITIO.contains(ruta)) {
                     rutas.add(ruta.replaceAll("\\{[^/}]+}", String.valueOf(idPara(ruta))));
                 }
             }

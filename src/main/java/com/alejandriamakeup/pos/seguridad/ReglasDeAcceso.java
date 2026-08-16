@@ -130,14 +130,31 @@ public class ReglasDeAcceso {
         requiere(HttpMethod.GET, "/api/v1/compras/{id}/previa-anulacion", Permiso.ANULAR_COMPRAS);
         requiere(HttpMethod.POST, "/api/v1/compras/{id}/anulacion", Permiso.ANULAR_COMPRAS);
 
+        // --- Configuración de la tienda --------------------------------------
+        // Solo la DUENA. La EMPLEADA imprime recibos pero no redefine el NIT ni la
+        // razón social que aparecen en todos los que se emitan después.
+        requiere(HttpMethod.GET, "/api/v1/configuracion/tienda", Permiso.CONFIGURAR_TIENDA);
+        requiere(HttpMethod.PUT, "/api/v1/configuracion/tienda", Permiso.CONFIGURAR_TIENDA);
+
         // --- Ventas ----------------------------------------------------------
         // La EMPLEADA vende: es su trabajo. Lo que no hace es anular, que devuelve
         // inventario y saca plata del cajón de hoy. Ninguna de las tres rutas se
         // queda en autenticado(): FugaDeCostosTest barre todos los GET de la API con
         // sesión de EMPLEADA, y venta_item guarda el costo congelado.
         requiere(HttpMethod.POST, "/api/v1/ventas", Permiso.REGISTRAR_VENTAS);
+        // El listado del día lo necesita quien vende: es donde encuentra la venta que
+        // hay que anular y, más adelante, el recibo que hay que reimprimir. Anular
+        // sigue siendo otra cosa, y va abajo con su permiso.
+        requiere(HttpMethod.GET, "/api/v1/ventas", Permiso.REGISTRAR_VENTAS);
+        requiere(HttpMethod.GET, "/api/v1/ventas/sin-recibo", Permiso.REGISTRAR_VENTAS);
         requiere(HttpMethod.GET, "/api/v1/ventas/{id}", Permiso.REGISTRAR_VENTAS);
         requiere(HttpMethod.POST, "/api/v1/ventas/{id}/anulacion", Permiso.ANULAR_VENTAS);
+
+        // Ver y regenerar el recibo van con REGISTRAR_VENTAS, o sea LOS DOS ROLES: la
+        // EMPLEADA tiene que poder reimprimir el comprobante de su propia venta sin
+        // buscar a nadie. Configurar la tienda sigue siendo otra cosa, arriba.
+        requiere(HttpMethod.GET, "/api/v1/ventas/{id}/recibo", Permiso.REGISTRAR_VENTAS);
+        requiere(HttpMethod.POST, "/api/v1/ventas/{id}/recibo", Permiso.REGISTRAR_VENTAS);
 
         // --- Inventario ------------------------------------------------------
         requiere(HttpMethod.POST, "/api/v1/inventario/carga-inicial", Permiso.CARGAR_INVENTARIO_INICIAL);

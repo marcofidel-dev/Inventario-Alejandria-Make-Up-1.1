@@ -82,9 +82,10 @@ describe('Navegación', () => {
   it('las secciones sin pantalla están deshabilitadas y lo dicen', () => {
     montar('DUENA', PERMISOS_DUENA)
 
-    expect(within(navegacion()).getByRole('button', { name: /Vender/ })).toBeDisabled()
     expect(within(navegacion()).getByRole('button', { name: /Métricas/ })).toBeDisabled()
     expect(within(navegacion()).getByRole('button', { name: /Compras/ })).toBeEnabled()
+    // Vender dejó de estar deshabilitada en la Fase 9: ya tiene pantalla.
+    expect(within(navegacion()).getByRole('button', { name: /Vender/ })).toBeEnabled()
   })
 
   /**

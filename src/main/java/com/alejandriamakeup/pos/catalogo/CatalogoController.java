@@ -194,6 +194,13 @@ public class CatalogoController {
         return new CatalogoDto.VarianteDto(
                 variante.getId(),
                 variante.getProducto().getId(),
+                // La misma función que congela la descripción al vender y que imprime el
+                // recibo: ver Descripcion. Aquí sí se navegan las asociaciones porque es
+                // una variante suelta que se acaba de escribir, no un catálogo entero.
+                Descripcion.de(variante.getProducto().getMarca().getNombre(),
+                        variante.getProducto().getNombre(),
+                        variante.getTono(),
+                        variante.getTamano()),
                 variante.getTono(),
                 variante.getTamano(),
                 variante.getCodigoBarras(),
@@ -201,6 +208,10 @@ public class CatalogoController {
                 variante.getStockMinimo(),
                 stock == null ? 0L : stock,
                 conHistorial,
+                // La bandera, no el importe. Una variante recién creada desde el flujo
+                // de compra sale de aquí con costo cero — que es la verdad: la
+                // mercancía todavía no llegó.
+                variante.getCostoPromedio() == 0,
                 variante.getFechaVencimiento(),
                 variante.getPaoMeses(),
                 variante.isActivo());

@@ -78,5 +78,16 @@ public enum Permiso {
     ANULAR_COMPRAS,
 
     /** Activar y desactivar usuarios. */
-    GESTIONAR_USUARIOS
+    GESTIONAR_USUARIOS,
+
+    /**
+     * Ver y cambiar los datos de la tienda: nombre, NIT, dirección, teléfono y pie
+     * del recibo.
+     *
+     * <p>Aparte de {@link #GESTIONAR_USUARIOS} porque son capacidades distintas, y no
+     * dentro de {@link #REGISTRAR_VENTAS} aunque el recibo sea lo único que los use:
+     * quien cobra necesita <em>imprimir</em> el comprobante, no redefinir la identidad
+     * fiscal que aparece en la cabecera de todos los que se emitan después.
+     */
+    CONFIGURAR_TIENDA
 }

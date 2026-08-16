@@ -28,6 +28,17 @@ public interface VentaRepository extends JpaRepository<Venta, Long> {
     List<Venta> findByFechaBetweenOrderByFechaAsc(LocalDateTime desde, LocalDateTime hasta);
 
     /**
+     * Las ventas que se quedaron sin comprobante.
+     *
+     * <p>Existe porque la generación del PDF puede fallar —disco lleno, permisos— y
+     * cuando falla la venta sigue siendo válida y {@code ruta_recibo} queda en nulo.
+     * Sin esta consulta, recuperarlas obligaría a revisar el listado día por día
+     * buscando cuáles no tienen recibo, y las que fallaron un día que nadie miró no se
+     * encontrarían nunca.
+     */
+    List<Venta> findByRutaReciboIsNullOrderByFechaAsc();
+
+    /**
      * El desglose por método de pago de una sesión, para el cierre.
      *
      * <p>Solo las {@code COMPLETADA}: una venta anulada ya devolvió su plata con un

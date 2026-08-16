@@ -15,7 +15,7 @@ import com.alejandriamakeup.pos.ventas.MetodoPago;
  * el día que alguien agrega una pantalla nueva. El margen es de la fase de métricas,
  * con su endpoint y su permiso propios.
  *
- * <p>{@code rutaRecibo} viaja en nulo hasta la Fase 9: ver
+ * <p>{@code rutaRecibo} viaja en nulo hasta que exista el generador de recibos: ver
  * {@code GeneradorComprobante}.
  */
 public record VentaDto(
@@ -37,6 +37,50 @@ public record VentaDto(
         String rutaRecibo,
         List<LineaDto> lineas,
         List<VarianteEnNegativoDto> variantesEnNegativo) {
+
+    /**
+     * La misma venta con la ruta de su recibo puesta.
+     *
+     * <p>Existe para que el cobro no tenga que releer la venta entera solo por este
+     * campo. El comprobante se genera después del commit, cuando el DTO de la
+     * respuesta ya está armado; sin esto habría que volver a consultar la venta, sus
+     * líneas y el stock de cada variante —eso es lo que arma {@code variantesEnNegativo}—
+     * en el camino del cobro, que es el más sensible del sistema, para enterarse de un
+     * dato que el generador acaba de devolver.
+     */
+    public VentaDto conRutaRecibo(String ruta) {
+        return new VentaDto(id, uuid, consecutivo, fecha, sesionCajaId, usuario, subtotal,
+                descuento, total, metodoPago, efectivoRecibido, cambio, estado, fechaAnulacion,
+                motivoAnulacion, ruta, lineas, variantesEnNegativo);
+    }
+
+    /**
+     * Una venta en el listado del día: lo justo para encontrarla.
+     *
+     * <p><strong>No es un {@link VentaDto} recortado, y por eso existe.</strong> Armar
+     * el DTO completo por fila cargaría los items de cada venta y, dentro de
+     * {@code variantesEnNegativo}, una consulta de stock por variante — de golpe son
+     * cientos de consultas sobre un pool de una sola conexión, para pintar una tabla
+     * que no muestra ni las líneas. Y el aviso de negativos no significa nada aquí: se
+     * escribió para el instante del cobro, no para una lista de ayer.
+     *
+     * <p>Sin costos ni márgenes, como todo el módulo.
+     *
+     * <p>{@code rutaRecibo} viaja aquí porque es lo que decide qué ofrece cada fila:
+     * ver el comprobante, o generarlo si faltó. Sin el campo, el listado tendría que
+     * pedir la venta completa por fila para saberlo.
+     */
+    public record Resumen(
+            Long id,
+            String consecutivo,
+            String fecha,
+            long total,
+            MetodoPago metodoPago,
+            EstadoVenta estado,
+            String usuario,
+            String motivoAnulacion,
+            String rutaRecibo) {
+    }
 
     /**
      * Una línea con lo que se congeló al vender: precio, descripción y la parte del

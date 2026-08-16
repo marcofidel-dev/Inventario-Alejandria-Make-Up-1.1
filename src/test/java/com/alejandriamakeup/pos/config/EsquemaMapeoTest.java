@@ -44,7 +44,11 @@ class EsquemaMapeoTest {
             // V3, Fase 2
             "IntentoLogin",
             // V6, Fase 7: las explicaciones de un arqueo se agregan, no editan la sesión
-            "NotaSesionCaja");
+            "NotaSesionCaja",
+            // V1, mapeada en la Fase 10: la tabla existía desde la primera migración y
+            // no la usaba nadie hasta que el encabezado del recibo necesitó saber cómo
+            // se llama la tienda.
+            "Configuracion");
 
     @PersistenceContext
     private EntityManager entityManager;

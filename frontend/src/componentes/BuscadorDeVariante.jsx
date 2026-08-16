@@ -23,11 +23,13 @@ const MAXIMO_SUGERENCIAS = 8
  * cerrar. El raton funciona, pero quien esta metiendo cuarenta lineas de una
  * factura no puede estar alternando entre teclado y raton en cada una.
  */
-export function BuscadorDeVariante({ filas, valor, alElegir, etiqueta, error, indice }) {
+export function BuscadorDeVariante({ filas, valor, alElegir, etiqueta, error, indice,
+  etiquetaAccesible }) {
   const [texto, setTexto] = useState('')
   const [abierto, setAbierto] = useState(false)
   const [resaltado, setResaltado] = useState(0)
   const entrada = useRef(null)
+  const cierreDiferido = useRef(null)
 
   const elegida = useMemo(
     () => filas.find((fila) => String(fila.id) === String(valor)),
@@ -81,13 +83,20 @@ export function BuscadorDeVariante({ filas, valor, alElegir, etiqueta, error, in
             role="combobox"
             aria-expanded={abierto && sugerencias.length > 0}
             aria-autocomplete="list"
-            aria-label={`Variante de la línea ${indice + 1}`}
+            // En una factura de compra hay lineas numeradas; en el mostrador hay un
+            // solo buscador y "la linea 1" no significaria nada.
+            aria-label={etiquetaAccesible ?? `Variante de la línea ${indice + 1}`}
             placeholder={elegida ? descripcionDe(elegida) : 'Buscar producto o tono…'}
             onChange={(e) => { setTexto(e.target.value); setAbierto(true); setResaltado(0) }}
-            onFocus={() => setAbierto(true)}
+            // Volver al buscador CANCELA el cierre pendiente. Sin esto, el cierre que
+            // dejo programado el blur anterior se dispara cuando ya se esta escribiendo
+            // otra vez y se lleva por delante la lista: la siguiente tecla la reabre,
+            // pero un Enter en ese hueco no elige nada. En el mostrador eso es teclear
+            // el producto siguiente y que no pase nada, una de cada tantas veces.
+            onFocus={() => { clearTimeout(cierreDiferido.current); setAbierto(true) }}
             // El cierre se retrasa para que un clic sobre una sugerencia llegue a
             // dispararse: sin esto, el blur la desmonta antes del click.
-            onBlur={() => setTimeout(() => setAbierto(false), 150)}
+            onBlur={() => { cierreDiferido.current = setTimeout(() => setAbierto(false), 150) }}
             onKeyDown={alTeclear}
           />
         )}

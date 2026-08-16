@@ -15,6 +15,22 @@ public interface VarianteFila {
 
     Long getId();
 
+    /**
+     * Si el costo promedio está en cero.
+     *
+     * <p><strong>Es una bandera, no un costo.</strong> Dice que por esa variante nunca
+     * entró mercancía valorada — o que todas las compras que la valoraban se anularon y
+     * el replay dejó el promedio otra vez en cero —, sin publicar ningún importe. La
+     * pantalla de venta la necesita para rechazar la variante <em>al agregarla al
+     * carrito</em>, que es donde el rechazo no cuesta nada; hacerlo al cobrar deja a
+     * quien atiende con el carrito lleno y una clienta enfrente.
+     *
+     * <p>No es lo mismo que {@code conHistorial}: una variante con movimientos cuyas
+     * compras se anularon todas tiene historial y sigue sin costo. Tampoco es lo mismo
+     * que {@code activo}: una variante inactiva sí se puede despachar.
+     */
+    boolean isSinCosto();
+
     Long getProductoId();
 
     String getTono();

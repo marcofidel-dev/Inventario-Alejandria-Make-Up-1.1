@@ -224,8 +224,12 @@ class VentaHttpTest {
                 .contains("\"subtotal\":" + total)
                 .contains("\"total\":" + total)
                 .contains("\"estado\":\"COMPLETADA\"")
-                .contains("\"rutaRecibo\":null")
-                .contains("Maybelline Labial mate Rojo 5 ml");
+                // Desde la Fase 10 el cobro devuelve la ruta del recibo ya generado: la
+                // pantalla puede ofrecerlo sin otra llamada, que es cuando la clienta
+                // lo está esperando.
+                .contains("\"rutaRecibo\":\"recibos/")
+                // Separador de la Fase 10: barra vertical pegada, sin espacios.
+                .contains("Maybelline|Labial mate|Rojo|5 ml");
 
         Venta venta = ventaRepository.findByUuid(uuid).orElseThrow();
         List<VentaItem> items = itemRepository.findByVentaId(venta.getId());
@@ -235,7 +239,8 @@ class VentaHttpTest {
                 .filter(i -> i.getVariante().getId().equals(labial)).findFirst().orElseThrow();
         assertThat(itemLabial.getPrecioUnitarioCongelado()).isEqualTo(PRECIO_LABIAL);
         assertThat(itemLabial.getCostoUnitarioCongelado()).isEqualTo(COSTO_LABIAL);
-        assertThat(itemLabial.getDescripcionCongelada()).isEqualTo("Maybelline Labial mate Rojo 5 ml");
+        assertThat(itemLabial.getDescripcionCongelada())
+                .isEqualTo("Maybelline|Labial mate|Rojo|5 ml");
 
         // Inventario: una salida por línea, con la cantidad negativa.
         List<MovimientoInventario> movimientos = movimientoRepository.findByVentaId(venta.getId());
@@ -341,13 +346,61 @@ class VentaHttpTest {
     }
 
     /**
+     * <strong>La respuesta que se perdió después del commit.</strong>
+     *
+     * <p>Es el caso que le da sentido a todo el mecanismo del uuid, y no es el del
+     * doble clic: la venta se escribió entera —consecutivo, líneas, inventario, cajón—
+     * y la respuesta no llegó al front, que ve un fallo de red indistinguible de uno
+     * donde no pasó nada. La única salida segura es reintentar <em>con el mismo
+     * uuid</em>, y por eso el front conserva el suyo mientras el cobro falle y solo lo
+     * descarta cuando uno sale bien.
+     *
+     * <p>Aquí se simula descartando la respuesta y repitiendo la petición byte por
+     * byte. Lo que se afirma es lo que se rompería si el uuid se regenerara al fallar:
+     * una venta, un movimiento de inventario por línea y un movimiento de caja. Con un
+     * uuid nuevo habría dos de cada cosa, la tienda entregaría un producto y habría
+     * cobrado dos veces, y el descuadre aparecería al cuadrar la caja de la noche.
+     */
+    @Test
+    @Order(8)
+    void laRespuestaPerdidaTrasElCommitSeReintentaConElMismoUuidYNoDuplica() {
+        String uuid = nuevoUuid();
+        String cuerpo = linea(labial, 2);
+        long ventasAntes = ventaRepository.count();
+        long stockAntes = movimientoRepository.stockDe(labial);
+
+        // Primer intento: el servidor lo escribe todo. La respuesta "se pierde" —el
+        // front nunca la ve— así que ni siquiera se mira.
+        cobrar(uuid, "EFECTIVO", 100_000L, cuerpo);
+
+        // El reintento del front: MISMO uuid, mismo cuerpo.
+        Respuesta reintento = cobrar(uuid, "EFECTIVO", 100_000L, cuerpo);
+
+        Venta venta = ventaRepository.findByUuid(uuid).orElseThrow();
+        var enInventario = movimientoRepository.findByVentaId(venta.getId());
+        var enCaja = movimientoCajaRepository.findByVentaId(venta.getId());
+
+        System.out.println("VERIFICACION respuesta perdida + reintento => " + reintento.estado()
+                + " | ventas +" + (ventaRepository.count() - ventasAntes)
+                + " | movimientos de inventario " + enInventario.size()
+                + " | movimientos de caja " + enCaja.size()
+                + " | stock " + stockAntes + " -> " + movimientoRepository.stockDe(labial));
+
+        assertThat(reintento.estado()).isEqualTo(200);
+        assertThat(ventaRepository.count()).isEqualTo(ventasAntes + 1);
+        assertThat(enInventario).hasSize(1);
+        assertThat(enCaja).hasSize(1);
+        assertThat(movimientoRepository.stockDe(labial)).isEqualTo(stockAntes - 2);
+    }
+
+    /**
      * <strong>Vender sin stock no se bloquea.</strong> Con una clienta enfrente,
      * bloquear empuja a un ajuste improvisado que borra la evidencia del descuadre. Lo
      * que sí pasa es que la respuesta nombra la variante que quedó negativa, para que
      * la pantalla avise y quede algo que averiguar.
      */
     @Test
-    @Order(8)
+    @Order(9)
     void venderSinStockNoSeBloqueaYSeAvisa() {
         long stock = movimientoRepository.stockDe(paleta);
         int cantidad = (int) stock + 3;
@@ -373,7 +426,7 @@ class VentaHttpTest {
      * producto se vendió con 100% de utilidad.
      */
     @Test
-    @Order(9)
+    @Order(10)
     void unaVarianteSinCostoNoSeVendeYElMensajeDiceQueHacer() {
         long ventasAntes = ventaRepository.count();
         Respuesta respuesta = cobrar(nuevoUuid(), "EFECTIVO", 50_000L, linea(sinCosto, 1));
@@ -394,7 +447,7 @@ class VentaHttpTest {
      * es justo lo que la tabla {@code consecutivo} existe para evitar.
      */
     @Test
-    @Order(10)
+    @Order(11)
     void unaVentaSinLineasNoSeCrea() {
         long ventasAntes = ventaRepository.count();
 
@@ -417,7 +470,7 @@ class VentaHttpTest {
      * cada vez que alguien pregunta.
      */
     @Test
-    @Order(11)
+    @Order(12)
     void elDescuentoRepartidoCuadraConLaCabeceraEnLaBase() {
         String uuid = nuevoUuid();
         long descuento = 25_000;
@@ -447,7 +500,7 @@ class VentaHttpTest {
 
     /** Un descuento mayor que el subtotal daría un total negativo. */
     @Test
-    @Order(12)
+    @Order(13)
     void elDescuentoNoPuedeSuperarElSubtotal() {
         Respuesta respuesta = duena.post("/api/v1/ventas",
                 "{\"uuid\":\"" + nuevoUuid() + "\",\"metodoPago\":\"TARJETA\","
@@ -471,7 +524,7 @@ class VentaHttpTest {
      * aunque no se haya cobrado.
      */
     @Test
-    @Order(13)
+    @Order(14)
     void unaVentaDeTotalCeroNoEscribeEnElCajonPeroSiEnElInventario() {
         long stockAntes = movimientoRepository.stockDe(base);
         String uuid = nuevoUuid();

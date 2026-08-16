@@ -44,6 +44,10 @@ export function variante(campos) {
     stockMinimo: 0,
     stock: 0,
     conHistorial: true,
+    // La bandera del catalogo, no un costo. `true` significa costo promedio en cero:
+    // nunca entro mercancia valorada, o todas las compras que la valoraban se anularon.
+    // Es lo que el punto de venta mira para rechazar la linea al agregarla.
+    sinCosto: false,
     fechaVencimiento: null,
     paoMeses: null,
     activo: true,
@@ -67,14 +71,75 @@ export function sesionDe(rol, permisos) {
   }
 }
 
+/** La DUENA puede todo: el backend le da el enum completo. */
 export const PERMISOS_DUENA = [
   'VER_COSTOS_Y_MARGENES', 'VER_METRICAS', 'EDITAR_CATALOGO', 'AJUSTAR_INVENTARIO',
   'CARGAR_INVENTARIO_INICIAL', 'GESTIONAR_USUARIOS', 'OPERAR_CAJA',
-  'REGISTRAR_MOVIMIENTO_CAJA', 'RESPALDAR',
+  'REGISTRAR_MOVIMIENTO_CAJA', 'VER_SESIONES_DE_OTROS', 'RESPALDAR',
+  'REGISTRAR_VENTAS', 'ANULAR_VENTAS',
   'GESTIONAR_PROVEEDORES', 'REGISTRAR_COMPRAS', 'RECIBIR_COMPRAS', 'ANULAR_COMPRAS',
 ]
 
-export const PERMISOS_EMPLEADA = ['OPERAR_CAJA', 'REGISTRAR_MOVIMIENTO_CAJA', 'RESPALDAR']
+/**
+ * Lo que la EMPLEADA si puede, copiado de PermisosPorRol.DE_EMPLEADA. Vender es su
+ * trabajo; anular no, porque devuelve inventario y saca plata del cajon del dia.
+ */
+export const PERMISOS_EMPLEADA = [
+  'OPERAR_CAJA', 'REGISTRAR_MOVIMIENTO_CAJA', 'REGISTRAR_VENTAS', 'RESPALDAR',
+]
+
+/**
+ * Una venta con la forma de VentaDto, tal como sale del cobro.
+ *
+ * `cambio` va aparte y explicito: el que vale es el del servidor, y para poder probar
+ * que la pantalla usa ese y no el que venia calculando hay que poder mandarlos
+ * distintos.
+ */
+export function ventaDePrueba(campos = {}) {
+  return {
+    id: 500,
+    uuid: 'el-que-mando-la-pantalla',
+    consecutivo: 'V-000123',
+    fecha: '2026-08-15T14:32:00',
+    sesionCajaId: 42,
+    usuario: 'Camila',
+    subtotal: 32000,
+    descuento: 0,
+    total: 32000,
+    metodoPago: 'EFECTIVO',
+    efectivoRecibido: 50000,
+    cambio: 18000,
+    estado: 'COMPLETADA',
+    fechaAnulacion: null,
+    motivoAnulacion: null,
+    rutaRecibo: null,
+    lineas: [{
+      varianteId: 1000,
+      descripcion: 'Loréal Labial mate Rojo carmín',
+      cantidad: 1,
+      precioUnitario: 32000,
+      descuentoProrrateado: 0,
+      subtotal: 32000,
+    }],
+    variantesEnNegativo: [],
+    ...campos,
+  }
+}
+
+/** Una fila del listado, con la forma de VentaDto.Resumen: sin lineas y sin costos. */
+export function resumenDeVenta(campos = {}) {
+  return {
+    id: 500,
+    consecutivo: 'V-000123',
+    fecha: '2026-08-15T14:32:00',
+    total: 32000,
+    metodoPago: 'EFECTIVO',
+    estado: 'COMPLETADA',
+    usuario: 'Camila',
+    motivoAnulacion: null,
+    ...campos,
+  }
+}
 
 /** Proveedores con la forma de ProveedorDto. */
 export function proveedoresDePrueba() {

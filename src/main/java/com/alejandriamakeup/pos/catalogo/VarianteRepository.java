@@ -30,11 +30,19 @@ public interface VarianteRepository extends JpaRepository<Variante, Long> {
      * Todas las variantes en una sola consulta, sin costos y sin tocar asociaciones
      * perezosas. {@code v.producto.id} se resuelve contra la columna FK, no con un
      * join, así que esto es una consulta y no una por fila.
+     *
+     * <p>{@code sinCosto} sale de un {@code case}, no de proyectar
+     * {@code costoPromedio}: lo que viaja es el booleano, y el importe no llega ni a
+     * {@link VarianteFila}. Un campo que no existe no se puede filtrar por descuido.
+     * La misma condición —{@code costoPromedio == 0}— la evalúa {@code ServicioVenta}
+     * al cobrar, y {@code CoherenciaSinCostoTest} exige que las dos escrituras de la
+     * regla, la de SQL y la de Java, marquen exactamente el mismo conjunto.
      */
     @Query("select v.id as id, v.producto.id as productoId, v.tono as tono, v.tamano as tamano, "
             + "v.codigoBarras as codigoBarras, v.precioVenta as precioVenta, "
             + "v.stockMinimo as stockMinimo, v.fechaVencimiento as fechaVencimiento, "
-            + "v.paoMeses as paoMeses, v.activo as activo "
+            + "v.paoMeses as paoMeses, v.activo as activo, "
+            + "case when v.costoPromedio > 0 then false else true end as sinCosto "
             + "from Variante v order by v.id")
     List<VarianteFila> filas();
 

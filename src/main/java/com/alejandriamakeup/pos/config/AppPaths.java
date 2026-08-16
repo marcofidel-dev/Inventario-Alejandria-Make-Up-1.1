@@ -18,7 +18,15 @@ public final class AppPaths {
     private AppPaths() {
     }
 
-    public record Rutas(Path directorioDatos, Path directorioRecibos, Path directorioBackups) {
+    /**
+     * @param directorioRaiz la carpeta que contiene a las otras tres. Existe porque
+     *        {@code venta.ruta_recibo} se guarda <strong>relativa</strong>
+     *        —{@code recibos/2026/08/V-000123.pdf}— y hace falta un origen contra el
+     *        que resolverla. Relativa y no absoluta para que mover la carpeta de datos
+     *        de equipo, o de letra de unidad, no deje todos los recibos ilocalizables.
+     */
+    public record Rutas(Path directorioRaiz, Path directorioDatos, Path directorioRecibos,
+                        Path directorioBackups) {
 
         public Path archivoBaseDatos() {
             return directorioDatos.resolve("data.db");
@@ -39,9 +47,16 @@ public final class AppPaths {
         }
     }
 
+    /**
+     * Las cuatro rutas. {@code recibos} y {@code backups} cuelgan de la <em>misma</em>
+     * raíz a propósito: la carpeta de datos es la que se sincroniza con la nube, y así
+     * la sincronización que cubre los respaldos cubre también los comprobantes, que
+     * hay que conservar cinco años.
+     */
     public static Rutas resolver(List<String> perfilesActivos) {
         Path base = raiz(perfilesActivos);
-        return new Rutas(base.resolve("data"), base.resolve("recibos"), base.resolve("backups"));
+        return new Rutas(base, base.resolve("data"), base.resolve("recibos"),
+                base.resolve("backups"));
     }
 
     private static Path raiz(List<String> perfilesActivos) {

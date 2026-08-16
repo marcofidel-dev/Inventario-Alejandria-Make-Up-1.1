@@ -146,15 +146,28 @@ class CatalogoCompletoTest {
         assertThat(variante(idConMovimientos).conHistorial()).isTrue();
     }
 
+    /**
+     * Ningún importe de costo sale por aquí, en ningún nivel de la estructura.
+     *
+     * <p>Lo único que nombra el costo es la bandera {@code sinCosto}, un booleano
+     * derivado de {@code costoPromedio == 0} que el punto de venta necesita para
+     * rechazar la variante al agregarla al carrito en vez de al cobrar. Se descuenta
+     * del barrido de palabras <strong>solo con su valor pegado</strong>, de modo que un
+     * {@code sinCostoPromedio} o un {@code sinCosto=21000} seguirían cayendo, y la
+     * comprobación del importe corre sobre la cadena entera.
+     */
     @Test
     void elCatalogoNoTraeCostoPromedioEnNingunNivel() {
         String serializado = servicioCatalogo.completo().toString();
+        String sinBanderas = serializado
+                .replace("sinCosto=true", "").replace("sinCosto=false", "");
 
-        System.out.println("VERIFICACION el catálogo serializado no menciona costos");
-        assertThat(serializado)
+        System.out.println("VERIFICACION el catálogo serializado no menciona importes de costo");
+        assertThat(serializado).contains("sinCosto=");
+        assertThat(sinBanderas)
                 .doesNotContain("costo")
-                .doesNotContain("Costo")
-                .doesNotContain("21000");
+                .doesNotContain("Costo");
+        assertThat(serializado).doesNotContain("21000");
     }
 
     /** Los inactivos también viajan: el front filtra, según la convención del proyecto. */

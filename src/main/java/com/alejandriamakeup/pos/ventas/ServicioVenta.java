@@ -1,12 +1,12 @@
 package com.alejandriamakeup.pos.ventas;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.alejandriamakeup.pos.caja.ServicioMovimientoCaja;
 import com.alejandriamakeup.pos.caja.ServicioSesionCaja;
 import com.alejandriamakeup.pos.caja.SesionCaja;
+import com.alejandriamakeup.pos.catalogo.Descripcion;
 import com.alejandriamakeup.pos.catalogo.ServicioVariante;
 import com.alejandriamakeup.pos.catalogo.Variante;
 import com.alejandriamakeup.pos.config.Fechas;
@@ -270,6 +271,36 @@ public class ServicioVenta {
         return aDto(buscar(ventaId));
     }
 
+    /**
+     * Las ventas de un día, en orden de la mañana a la noche.
+     *
+     * <p>El rango se cierra en {@code 23:59:59} y no en el día siguiente porque el
+     * esquema guarda las fechas como TEXT de ancho fijo con precisión de segundos
+     * —{@link Fechas} trunca ahí—, así que no existe ninguna venta entre ese instante
+     * y la medianoche. Comparar ese texto es comparar cronológicamente.
+     *
+     * <p>Sin paginar: son las ventas de un día en una tienda, y la convención del
+     * proyecto es cargar el listado completo.
+     */
+    public List<VentaDto.Resumen> listar(LocalDate fecha) {
+        LocalDate dia = fecha == null ? LocalDate.now() : fecha;
+
+        return ventaRepository
+                .findByFechaBetweenOrderByFechaAsc(dia.atStartOfDay(), dia.atTime(23, 59, 59))
+                .stream()
+                .map(venta -> new VentaDto.Resumen(
+                        venta.getId(),
+                        venta.getConsecutivo(),
+                        String.valueOf(venta.getFecha()),
+                        venta.getTotal(),
+                        venta.getMetodoPago(),
+                        venta.getEstado(),
+                        venta.getUsuario().getNombre(),
+                        venta.getMotivoAnulacion(),
+                        venta.getRutaRecibo()))
+                .toList();
+    }
+
     // ------------------------------------------------------------------- apoyo
 
     /**
@@ -314,15 +345,26 @@ public class ServicioVenta {
         venta.setCambio(recibido - total);
     }
 
-    /** Marca, producto, tono y tamaño, lo que exista. Es lo que se congela y se imprime. */
+    /**
+     * Marca, producto, tono y tamaño, lo que exista. Es lo que se congela y se imprime.
+     *
+     * <p><strong>Conviven dos formatos en la base y así se queda.</strong> Hasta la
+     * Fase 9 las partes se unían con espacios —{@code "Maybelline Labial mate Rojo
+     * 5 ml"}—; desde la <strong>Fase 10</strong> se unen con {@link Descripcion#SEPARADOR}
+     * y se sanean: {@code "Maybelline|Labial mate|Rojo|5 ml"}. Las ventas anteriores
+     * conservan la forma vieja porque {@code venta_item} es inmutable, y esa es la
+     * decisión correcta: reescribir una descripción congelada sería falsificar el
+     * comprobante de lo que se entregó. Quien vea las dos formas en un listado dentro
+     * de seis meses, o regenere el recibo de una venta vieja y lo vea con espacios, no
+     * está mirando un error: está mirando la fecha de corte.
+     */
     private String describir(Variante variante) {
-        return Stream.of(variante.getProducto().getMarca().getNombre(),
-                        variante.getProducto().getNombre(),
-                        variante.getTono(),
-                        variante.getTamano())
-                .filter(parte -> parte != null && !parte.isBlank())
-                .reduce((a, b) -> a + " " + b)
-                .orElse("Variante " + variante.getId());
+        String descripcion = Descripcion.de(
+                variante.getProducto().getMarca().getNombre(),
+                variante.getProducto().getNombre(),
+                variante.getTono(),
+                variante.getTamano());
+        return descripcion.isBlank() ? "Variante " + variante.getId() : descripcion;
     }
 
     private Venta buscar(long ventaId) {

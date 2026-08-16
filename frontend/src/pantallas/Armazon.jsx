@@ -32,7 +32,13 @@ const SECCIONES = [
     id: 'vender',
     texto: 'Vender',
     icono: ShoppingCart,
-    proximamente: 'El punto de venta llega en la fase siguiente.',
+    permiso: PERMISOS.registrarVentas,
+    pestanas: [
+      { id: 'cobrar', texto: 'Cobrar' },
+      // El listado lo necesita quien vende: es donde encuentra la venta que hay que
+      // anular. Anular es lo que pide permiso aparte, y eso se decide dentro.
+      { id: 'ventas', texto: 'Ventas del día' },
+    ],
   },
   {
     id: 'caja',

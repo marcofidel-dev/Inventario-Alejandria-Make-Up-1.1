@@ -12,6 +12,8 @@ import { Compras } from './pantallas/Compras.jsx'
 import { ConfiguracionInicial } from './pantallas/ConfiguracionInicial.jsx'
 import { Login } from './pantallas/Login.jsx'
 import { Proveedores } from './pantallas/Proveedores.jsx'
+import { Venta } from './pantallas/Venta.jsx'
+import { Ventas } from './pantallas/Ventas.jsx'
 import { useSesion } from './sesion/SesionContext.jsx'
 
 /**
@@ -85,6 +87,12 @@ function Contenido({ vista, catalogo, compras, alIrA }) {
   const donde = `${vista.seccion}/${vista.pestana ?? ''}`
 
   switch (donde) {
+    case 'vender/cobrar':
+      // El punto de venta necesita mover la vista: sin caja abierta no deja armar el
+      // carrito y lleva a la pantalla donde eso se arregla.
+      return <Venta catalogo={catalogo} alIrA={alIrA} />
+    case 'vender/ventas':
+      return <Ventas />
     // Sin pestañas: pestanaInicialDe() devuelve null y la vista queda en 'caja/'.
     case 'caja/':
       return <Caja />

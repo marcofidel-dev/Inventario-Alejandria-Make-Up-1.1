@@ -63,10 +63,19 @@ public class ServicioCatalogoCompleto {
 
         Map<Long, Long> stockPorVariante = stockPorVariante();
 
+        // La descripción se arma aquí, EN MEMORIA, con lo que ya se leyó: no es una
+        // consulta más ni una asociación perezosa por variante. Las cinco consultas
+        // siguen siendo cinco, que es lo que vigila CatalogoSinNMasUnoTest.
+        Map<Long, String> nombreDeMarca = new HashMap<>();
+        marcas.forEach(m -> nombreDeMarca.put(m.id(), m.nombre()));
+        Map<Long, CatalogoDto.ProductoDto> porProducto = new HashMap<>();
+        productos.forEach(p -> porProducto.put(p.id(), p));
+
         List<CatalogoDto.VarianteDto> variantes = varianteRepository.filas().stream()
                 .map(v -> new CatalogoDto.VarianteDto(
                         v.getId(),
                         v.getProductoId(),
+                        descripcionDe(v, porProducto, nombreDeMarca),
                         v.getTono(),
                         v.getTamano(),
                         v.getCodigoBarras(),
@@ -78,12 +87,31 @@ public class ServicioCatalogoCompleto {
                         // solo las que tienen historial.
                         stockPorVariante.getOrDefault(v.getId(), 0L),
                         stockPorVariante.containsKey(v.getId()),
+                        // No se puede vender lo que no tiene costo, y la pantalla lo
+                        // sabe antes de agregarlo al carrito. La bandera viaja; el
+                        // importe no llega ni a la proyección.
+                        v.isSinCosto(),
                         v.getFechaVencimiento(),
                         v.getPaoMeses(),
                         v.isActivo()))
                 .toList();
 
         return new CatalogoDto(marcas, categorias, productos, variantes);
+    }
+
+    /**
+     * La misma función que congela la descripción al vender y que imprime el recibo.
+     * Que sea la misma es el punto: ver {@link Descripcion}.
+     */
+    private String descripcionDe(VarianteFila variante,
+                                 Map<Long, CatalogoDto.ProductoDto> porProducto,
+                                 Map<Long, String> nombreDeMarca) {
+        CatalogoDto.ProductoDto producto = porProducto.get(variante.getProductoId());
+        String marca = producto == null ? null : nombreDeMarca.get(producto.marcaId());
+        return Descripcion.de(marca,
+                producto == null ? null : producto.nombre(),
+                variante.getTono(),
+                variante.getTamano());
     }
 
     /** Costos y márgenes. Solo lo llama el endpoint que exige el permiso. */

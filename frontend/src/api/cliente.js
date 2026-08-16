@@ -65,7 +65,7 @@ export function alVencerLaSesion(oyente) {
   return () => oyentesDeSesionVencida.delete(oyente)
 }
 
-async function pedir(metodo, ruta, cuerpo) {
+async function pedir(metodo, ruta, cuerpo, conEstado = false) {
   let respuesta
   try {
     respuesta = await fetch(ruta, {
@@ -83,12 +83,12 @@ async function pedir(metodo, ruta, cuerpo) {
     })
   }
 
-  if (respuesta.status === 204) return null
+  if (respuesta.status === 204) return conEstado ? { estado: 204, datos: null } : null
 
   const texto = await respuesta.text()
   const datos = texto ? seguroJson(texto) : null
 
-  if (respuesta.ok) return datos
+  if (respuesta.ok) return conEstado ? { estado: respuesta.status, datos } : datos
 
   const error = new ErrorApi({
     estado: respuesta.status,
@@ -116,4 +116,13 @@ export const api = {
   get: (ruta) => pedir('GET', ruta),
   post: (ruta, cuerpo) => pedir('POST', ruta, cuerpo),
   put: (ruta, cuerpo) => pedir('PUT', ruta, cuerpo),
+
+  /**
+   * Como `post`, pero devuelve `{estado, datos}`.
+   *
+   * Existe por un solo endpoint: el cobro responde 201 cuando creo la venta y 200
+   * cuando devolvio una que ya existia con ese uuid. Para todo lo demas el codigo
+   * exacto no aporta nada y `post` sigue devolviendo el cuerpo pelado.
+   */
+  postConEstado: (ruta, cuerpo) => pedir('POST', ruta, cuerpo, true),
 }

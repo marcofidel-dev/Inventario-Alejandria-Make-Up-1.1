@@ -267,6 +267,70 @@
 
 .formulario--angosto { max-width: var(--ancho-modal); }
 
+/* --------------------------------------------------------- Punto de venta */
+
+/* El carrito manda en ancho: es donde se mira mientras se arma la venta. El panel
+   de cobro se queda fijo a la derecha para que el total no se mueva de sitio entre
+   una venta y la siguiente. */
+.venta {
+  display: grid;
+  grid-template-columns: 1fr minmax(0, var(--ancho-formulario));
+  gap: var(--e-6);
+  align-items: start;
+}
+
+.venta__carrito {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  min-width: 0;
+}
+
+.venta__cobro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+  padding: var(--e-4);
+  border: var(--separador-fuerte);
+  border-radius: var(--radio);
+  background: var(--fondo-hundido);
+}
+
+.venta__total {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  margin: 0;
+  font-size: var(--texto-sm);
+}
+
+/* EL NUMERO QUE SE LEE EN VOZ ALTA. Es el unico sitio del sistema que usa el
+   tamano mas grande de la escala, y por eso el tamano significa algo. */
+.venta__cifra {
+  font-size: var(--texto-3xl);
+  line-height: var(--interlinea-apretada);
+  color: var(--texto);
+}
+
+/* El cambio: grande, pero por debajo del total. Quien cobra dice primero cuanto es
+   y despues cuanto devuelve. */
+.venta__cifra-media {
+  font-size: var(--texto-2xl);
+  line-height: var(--interlinea-apretada);
+}
+
+.venta__efectivo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+}
+
+.venta__sugerencias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-2);
+}
+
 /* -------------------------------------------------------------- Compras */
 
 .registro__cierre {

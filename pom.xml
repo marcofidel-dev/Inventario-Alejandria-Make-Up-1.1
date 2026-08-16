@@ -23,6 +23,8 @@
         <node.version>v20.17.0</node.version>
         <npm.version>10.8.2</npm.version>
         <frontend.skip>false</frontend.skip>
+        <!-- PDFBox no lo gestiona el BOM de Spring Boot: la version va aqui. -->
+        <pdfbox.version>3.0.6</pdfbox.version>
     </properties>
 
     <!-- sqlite-jdbc y hibernate-community-dialects quedan sin <version>:
@@ -62,6 +64,16 @@
         <dependency>
             <groupId>org.hibernate.orm</groupId>
             <artifactId>hibernate-community-dialects</artifactId>
+        </dependency>
+        <!-- OJO CON LA LICENCIA: PDFBox es Apache 2.0. NUNCA iText, cuya version
+             gratuita es AGPL y obligaria a liberar el codigo de esta app, que se
+             distribuye como instalador. Es una decision de licencia, no de gusto:
+             cambiar de libreria aqui cambia lo que se puede hacer con el producto.
+             Y la API es la de PDFBox 3, no la de 2.x. -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>${pdfbox.version}</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>

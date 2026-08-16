@@ -5,10 +5,11 @@ import java.util.List;
 /**
  * El comprobante de una venta.
  *
- * <p><strong>Declarada, sin implementación todavía.</strong> La Fase 9 trae
- * {@code PdfReciboLocal} con PDFBox; hoy {@code venta.ruta_recibo} queda en nulo.
- * La interfaz existe desde ya porque es la costura por donde entra mañana un
- * adaptador de facturación electrónica DIAN sin tocar el punto de venta.
+ * <p><strong>Declarada, sin implementación todavía.</strong> {@code PdfReciboLocal}
+ * con PDFBox llega con el módulo de recibos; hoy {@code venta.ruta_recibo} queda en
+ * nulo. Lo que ya existe es el sitio desde donde se va a reimprimir: el listado de
+ * ventas del día. La interfaz existe desde ya porque es la costura por donde entra
+ * mañana un adaptador de facturación electrónica DIAN sin tocar el punto de venta.
  *
  * <p>Se invoca <strong>después</strong> del commit de la venta, nunca dentro de la
  * transacción: la venta es la verdad y el comprobante es derivado. Si la generación

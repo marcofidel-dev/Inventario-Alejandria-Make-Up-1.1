@@ -50,10 +50,25 @@ public record CatalogoDto(
      * nunca entró, y un producto sin costo real congelaría costo 0 en la venta—, mientras
      * que las pantallas donde la mercancía entra (compra y carga inicial) necesitan
      * justamente las otras, porque acaban de crearlas.
+     *
+     * <p><strong>{@code sinCosto} es una bandera, no un costo.</strong> Vale
+     * {@code true} cuando el costo promedio está en cero, y con eso la pantalla de
+     * venta rechaza la variante al agregarla al carrito en vez de al cobrar. No
+     * publica ningún importe: el barrido de {@code FugaDeCostosTest} sigue corriendo
+     * sobre el cuerpo entero buscando valores.
+     *
+     * <p><strong>{@code descripcion} viene armada del servidor</strong> por
+     * {@code Descripcion.de()}, la misma función que congela {@code venta_item} y que
+     * imprime el recibo. Va aquí y no se reconstruye en el front a propósito: dos
+     * implementaciones de la misma cadena divergen algún día, y ese día el carrito
+     * muestra una descripción y el recibo otra para la misma venta. Las partes sueltas
+     * siguen viajando porque el catálogo las necesita en columnas y la búsqueda las
+     * usa para su clave.
      */
     public record VarianteDto(
             Long id,
             Long productoId,
+            String descripcion,
             String tono,
             String tamano,
             String codigoBarras,
@@ -61,6 +76,7 @@ public record CatalogoDto(
             int stockMinimo,
             long stock,
             boolean conHistorial,
+            boolean sinCosto,
             LocalDate fechaVencimiento,
             Integer paoMeses,
             boolean activo) {

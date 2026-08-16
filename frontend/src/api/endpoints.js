@@ -78,6 +78,22 @@ export const compras = {
   anular: (id, motivo) => api.post(`/api/v1/compras/${id}/anulacion`, { motivo }),
 }
 
+export const ventas = {
+  /** Sin fecha, las de hoy. El servidor decide cual es hoy. */
+  listar: (fecha) => api.get(fecha ? `/api/v1/ventas?fecha=${fecha}` : '/api/v1/ventas'),
+
+  /**
+   * Cobra. Devuelve {estado, datos}: el 201 dice que la venta se creo y el 200 que
+   * el servidor devolvio una que ya existia con ese uuid.
+   *
+   * El cuerpo NO lleva total ni cambio. Los dos los calcula el servidor, y la
+   * pantalla muestra despues los que devolvio.
+   */
+  cobrar: (datos) => api.postConEstado('/api/v1/ventas', datos),
+
+  anular: (id, motivo) => api.post(`/api/v1/ventas/${id}/anulacion`, { motivo }),
+}
+
 /**
  * Quita el monto de un movimiento de caja. LA LINEA MAS IMPORTANTE DE ESTE ARCHIVO.
  *

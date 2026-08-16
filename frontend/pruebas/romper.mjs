@@ -31,6 +31,8 @@ const ENDPOINTS = src('api', 'endpoints.js')
 const REGISTRAR_COMPRA = src('pantallas', 'RegistrarCompra.jsx')
 const BAJAS = src('pantallas', 'BajasDeCompra.jsx')
 const CAJA = src('pantallas', 'Caja.jsx')
+const VENTA = src('pantallas', 'Venta.jsx')
+const LISTADO_VENTAS = src('pantallas', 'Ventas.jsx')
 const CERRAR_CAJA = src('pantallas', 'CerrarCaja.jsx')
 const CONTADOR = src('componentes', 'ContadorDeDenominaciones.jsx')
 
@@ -289,6 +291,100 @@ const CASOS = [
     debeCaer: 'el buscador de la compra sí encuentra una variante sin historial',
     romper: sustituir('filas={catalogo.todas}', 'filas={catalogo.filas}'),
   },
+  // ------------------------------------------------------------ Fase 9
+
+  {
+    regla: 'el uuid se descarta SOLO tras un cobro exitoso, no tras uno fallido',
+    archivo: VENTA,
+    pruebas: 'pruebas/Venta.prueba.jsx',
+    debeCaer: 'tras un fallo de red el reintento manda el mismo uuid',
+    // La regresion realista: "limpiar" el carrito por completo al fallar, incluido el
+    // uuid. Con eso, la respuesta perdida despues del commit se convierte en venta
+    // doble e inventario descontado dos veces.
+    romper: sustituir('      huboFallo.current = true\n      setError(fallo)',
+      '      huboFallo.current = true\n      uuid.current = nuevoUuid()\n      setError(fallo)'),
+  },
+  {
+    regla: 'el uuid SI se descarta tras el exito: dos ventas seguidas son dos ventas',
+    archivo: VENTA,
+    pruebas: 'pruebas/Venta.prueba.jsx',
+    debeCaer: 'dos ventas seguidas del mismo producto crean dos ventas distintas',
+    romper: sustituir('      uuid.current = nuevoUuid()\n      huboFallo.current = false',
+      '      huboFallo.current = false'),
+  },
+  {
+    regla: 'un 200 tras un fallo es la recuperacion esperada y no alarma',
+    archivo: VENTA,
+    pruebas: 'pruebas/Venta.prueba.jsx',
+    debeCaer: 'el 200 que recupera un cobro fallido no se anuncia como problema',
+    romper: sustituir('uuidReutilizado: estado === 200 && !huboFallo.current,',
+      'uuidReutilizado: estado === 200,'),
+  },
+  {
+    regla: 'la variante sin costo se rechaza al agregar al carrito, no al cobrar',
+    archivo: VENTA,
+    pruebas: 'pruebas/Venta.prueba.jsx',
+    debeCaer: 'una variante sin costo no entra al carrito',
+    romper: sustituir('    if (fila.sinCosto) {', '    if (false && fila.sinCosto) {'),
+  },
+  {
+    regla: 'sin sesion de caja abierta no se arma el carrito',
+    archivo: VENTA,
+    pruebas: 'pruebas/Venta.prueba.jsx',
+    debeCaer: 'sin caja abierta no deja armar el carrito',
+    // Tratar el 404 como "ya hay caja": la forma en que esto se rompe de verdad es
+    // dando por buena una respuesta que dice justamente lo contrario.
+    romper: sustituir('        if (fallo.codigo === CODIGOS.noEncontrado) return null',
+      '        if (fallo.codigo === CODIGOS.noEncontrado) '
+        + "return { consecutivo: 'C-1', esDeUnDiaAnterior: false }"),
+  },
+  {
+    regla: 'la caja olvidada de un dia anterior tampoco deja vender',
+    archivo: VENTA,
+    pruebas: 'pruebas/Venta.prueba.jsx',
+    debeCaer: 'con la caja de un día anterior tampoco deja vender',
+    romper: sustituir('  if (!sesion || sesion.esDeUnDiaAnterior) {', '  if (!sesion) {'),
+  },
+  {
+    regla: 'el cambio que queda en pantalla es el del servidor, no el que se calculo',
+    archivo: VENTA,
+    pruebas: 'pruebas/Venta.prueba.jsx',
+    debeCaer: 'el cambio que queda en pantalla es el del servidor',
+    romper: sustituir(
+      '<span className="monto venta__cifra-media">{formatearPesos(venta.cambio)}</span>',
+      '<span className="monto venta__cifra-media">'
+        + '{formatearPesos(cambioQueMostroLaPantalla)}</span>'),
+  },
+  {
+    regla: 'el stock negativo se avisa sin presentarlo como un error de la venta',
+    archivo: VENTA,
+    pruebas: 'pruebas/Venta.prueba.jsx',
+    debeCaer: 'avisa del stock negativo sin presentarlo como un error',
+    romper: sustituir('<Aviso tipo="alerta" titulo="Quedó stock en negativo">',
+      '<Aviso tipo="error" titulo="Quedó stock en negativo">'),
+  },
+  {
+    regla: 'el cobro descuenta el stock del catalogo en memoria',
+    archivo: USE_CATALOGO,
+    pruebas: 'pruebas/Venta.prueba.jsx',
+    debeCaer: 'el cobro descuenta del catálogo en memoria',
+    romper: sustituir('    if (!lineas?.length) return', '    if (lineas) return'),
+  },
+  {
+    regla: 'anular es solo de la DUENA: a la EMPLEADA no se le ofrece',
+    archivo: LISTADO_VENTAS,
+    pruebas: 'pruebas/Ventas.prueba.jsx',
+    debeCaer: 'la EMPLEADA no ve el botón de anular',
+    romper: sustituir('puedeAnular={puede(PERMISOS.anularVentas)}', 'puedeAnular'),
+  },
+  {
+    regla: 'el motivo de la anulacion es obligatorio',
+    archivo: LISTADO_VENTAS,
+    pruebas: 'pruebas/Ventas.prueba.jsx',
+    debeCaer: 'no deja anular sin motivo',
+    romper: sustituir('               disabled={!motivo.trim()}>', '>'),
+  },
+
   {
     regla: 'el total contado suma denominación por cantidad, que es como se cuenta la plata',
     archivo: CONTADOR,

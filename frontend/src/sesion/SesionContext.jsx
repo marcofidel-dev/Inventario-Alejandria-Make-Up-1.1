@@ -26,6 +26,8 @@ export const PERMISOS = {
   gestionarUsuarios: 'GESTIONAR_USUARIOS',
   verMetricas: 'VER_METRICAS',
   operarCaja: 'OPERAR_CAJA',
+  registrarVentas: 'REGISTRAR_VENTAS',
+  anularVentas: 'ANULAR_VENTAS',
   registrarMovimientoCaja: 'REGISTRAR_MOVIMIENTO_CAJA',
   gestionarProveedores: 'GESTIONAR_PROVEEDORES',
   registrarCompras: 'REGISTRAR_COMPRAS',

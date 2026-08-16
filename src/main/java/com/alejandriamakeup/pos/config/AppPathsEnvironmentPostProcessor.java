@@ -28,6 +28,7 @@ public class AppPathsEnvironmentPostProcessor implements EnvironmentPostProcesso
 
         Map<String, Object> propiedades = new LinkedHashMap<>();
         propiedades.put("APP_DB_PATH", rutas.archivoBaseDatos().toString());
+        propiedades.put("app.paths.raiz", rutas.directorioRaiz().toString());
         propiedades.put("app.paths.data", rutas.directorioDatos().toString());
         propiedades.put("app.paths.recibos", rutas.directorioRecibos().toString());
         propiedades.put("app.paths.backups", rutas.directorioBackups().toString());

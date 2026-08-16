@@ -44,7 +44,10 @@ class PermisosPorRolTest {
             Permiso.GESTIONAR_PROVEEDORES,
             Permiso.REGISTRAR_COMPRAS,
             Permiso.RECIBIR_COMPRAS,
-            Permiso.ANULAR_COMPRAS);
+            Permiso.ANULAR_COMPRAS,
+            // Fase 10: la EMPLEADA imprime recibos, pero no redefine el NIT ni la razón
+            // social que salen impresos en todos los que se emitan después.
+            Permiso.CONFIGURAR_TIENDA);
 
     @Test
     void laEmpleadaNoPuedeVerCostosNiMargenes() {
@@ -98,6 +101,18 @@ class PermisosPorRolTest {
                     .withFailMessage("La DUENA debería tener %s", permiso)
                     .isTrue();
         }
+    }
+
+    /**
+     * La pareja que define la Fase 10: imprimir el comprobante sí, cambiar lo que dice
+     * su encabezado no. Son la misma pantalla para quien mira desde afuera y dos
+     * capacidades distintas para el sistema.
+     */
+    @Test
+    void laEmpleadaImprimeRecibosPeroNoConfiguraLaTienda() {
+        assertThat(PermisosPorRol.puede(Rol.EMPLEADA, Permiso.REGISTRAR_VENTAS)).isTrue();
+        assertThat(PermisosPorRol.puede(Rol.EMPLEADA, Permiso.CONFIGURAR_TIENDA)).isFalse();
+        assertThat(PermisosPorRol.puede(Rol.DUENA, Permiso.CONFIGURAR_TIENDA)).isTrue();
     }
 
     @Test

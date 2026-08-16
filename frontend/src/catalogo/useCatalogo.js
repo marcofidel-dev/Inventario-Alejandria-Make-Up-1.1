@@ -35,6 +35,41 @@ export function useCatalogo() {
   }, [recargar])
 
   /**
+   * Baja el stock en memoria de las lineas que acaba de cobrar el servidor.
+   *
+   * SIN ESTO LOS NUMEROS DE LA BUSQUEDA MIENTEN. El catalogo se carga una vez y se
+   * filtra en memoria, que es lo que hace instantanea la busqueda del mostrador; el
+   * precio a pagar es que despues de cincuenta ventas el stock que se ve en pantalla
+   * es el de la manana. Recargar el catalogo entero tras cada cobro seria traerlo
+   * cientos de veces al dia por un dato que la propia respuesta ya trae.
+   *
+   * Se llama con las lineas de la venta CONFIRMADA, nunca con las del carrito: lo que
+   * salio del inventario es lo que el servidor dice que salio.
+   *
+   * Es una aproximacion honesta, no la verdad: no ve lo que entra por una compra ni lo
+   * que otra pantalla ajusta. La verdad sigue siendo el ledger, y llega con el proximo
+   * `recargar()`.
+   */
+  const descontarStock = useCallback((lineas) => {
+    if (!lineas?.length) return
+    setDatos((actuales) => {
+      if (!actuales) return actuales
+      const porVariante = new Map()
+      for (const linea of lineas) {
+        const id = String(linea.varianteId)
+        porVariante.set(id, (porVariante.get(id) ?? 0) + linea.cantidad)
+      }
+      return {
+        ...actuales,
+        variantes: actuales.variantes.map((variante) => {
+          const vendidas = porVariante.get(String(variante.id))
+          return vendidas ? { ...variante, stock: variante.stock - vendidas } : variante
+        }),
+      }
+    })
+  }, [])
+
+  /**
    * Una fila por variante —TODAS, tengan historial o no—, ya unida con su producto,
    * marca y categoria, y con la clave de busqueda calculada una sola vez.
    * Recalcularla en cada tecla seria hacer el mismo trabajo cincuenta veces por
@@ -96,6 +131,7 @@ export function useCatalogo() {
     cargando,
     error,
     recargar,
+    descontarStock,
     marcas: datos?.marcas ?? [],
     categorias: datos?.categorias ?? [],
     productos: datos?.productos ?? [],
