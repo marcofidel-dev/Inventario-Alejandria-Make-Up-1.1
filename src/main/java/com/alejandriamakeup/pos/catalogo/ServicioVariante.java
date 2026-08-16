@@ -1,5 +1,6 @@
 package com.alejandriamakeup.pos.catalogo;
 
+import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -59,6 +60,7 @@ public class ServicioVariante {
 
         Variante guardada = varianteRepository.save(variante);
         log.info("Variante creada: producto {} tono {}", producto.getId(), guardada.getTono());
+        inicializarProductoYMarca(guardada);
         return guardada;
     }
 
@@ -68,7 +70,9 @@ public class ServicioVariante {
         variante.setProducto(servicioProducto.buscar(peticion.productoId()));
         exigirPrecioDeVarianteActiva(peticion.precioVenta(), variante.isActivo());
         aplicar(variante, peticion);
-        return varianteRepository.save(variante);
+        Variante guardada = varianteRepository.save(variante);
+        inicializarProductoYMarca(guardada);
+        return guardada;
     }
 
     @Transactional
@@ -147,5 +151,18 @@ public class ServicioVariante {
             texto.append(texto.isEmpty() ? "" : " ").append(variante.getTamano());
         }
         return texto.isEmpty() ? "variante " + variante.getId() : texto.toString();
+    }
+
+    /**
+     * {@code producto} y {@code producto.marca} son {@code LAZY}. El controlador arma
+     * la descripción de la variante navegándolos —{@code Descripcion.de()} necesita el
+     * nombre de la marca—, pero con {@code open-in-view: false} la sesión ya está
+     * cerrada cuando ese código corre: sin esto, cualquier creación o edición terminaba
+     * en 500 por {@code LazyInitializationException}. Se inicializan aquí, todavía
+     * dentro de la transacción, donde las asociaciones siguen vivas.
+     */
+    private void inicializarProductoYMarca(Variante variante) {
+        Hibernate.initialize(variante.getProducto());
+        Hibernate.initialize(variante.getProducto().getMarca());
     }
 }
