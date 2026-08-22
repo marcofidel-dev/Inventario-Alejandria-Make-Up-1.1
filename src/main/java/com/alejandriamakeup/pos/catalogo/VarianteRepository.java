@@ -53,6 +53,20 @@ public interface VarianteRepository extends JpaRepository<Variante, Long> {
             + "from Variante v join v.producto p join p.marca ma order by v.id")
     List<VarianteCostoFila> filasConCosto();
 
+    /**
+     * Todas las variantes con lo que necesitan las métricas: costo, mínimo,
+     * vencimiento y PAO. Una consulta, sin asociaciones perezosas — {@code producto}
+     * y {@code marca} vienen por join en la misma sentencia, así que el panel no
+     * degrada cuando la tienda tenga inventario de verdad.
+     */
+    @Query("select v.id as id, ma.nombre as marcaNombre, p.nombre as productoNombre, "
+            + "v.tono as tono, v.tamano as tamano, v.precioVenta as precioVenta, "
+            + "v.costoPromedio as costoPromedio, v.stockMinimo as stockMinimo, "
+            + "v.fechaVencimiento as fechaVencimiento, v.paoMeses as paoMeses, "
+            + "v.activo as activo "
+            + "from Variante v join v.producto p join p.marca ma order by v.id")
+    List<VarianteMetricaFila> filasParaMetricas();
+
     /** Las variantes de un producto, por si hay que avisar al desactivarlo. */
     long countByProductoIdAndActivoTrue(Long productoId);
 }

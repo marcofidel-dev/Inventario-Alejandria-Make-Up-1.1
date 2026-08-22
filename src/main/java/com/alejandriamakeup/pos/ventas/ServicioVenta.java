@@ -139,7 +139,7 @@ public class ServicioVenta {
         long subtotal = 0;
 
         for (int i = 0; i < lineas.size(); i++) {
-            Variante variante = servicioVariante.buscar(lineas.get(i).varianteId());
+            Variante variante = servicioVariante.buscarEntidad(lineas.get(i).varianteId());
             exigirCosto(variante);
             variantes.add(variante);
             subtotales[i] = (long) lineas.get(i).cantidad() * variante.getPrecioVenta();

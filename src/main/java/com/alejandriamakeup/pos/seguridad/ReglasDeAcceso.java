@@ -156,6 +156,13 @@ public class ReglasDeAcceso {
         requiere(HttpMethod.GET, "/api/v1/ventas/{id}/recibo", Permiso.REGISTRAR_VENTAS);
         requiere(HttpMethod.POST, "/api/v1/ventas/{id}/recibo", Permiso.REGISTRAR_VENTAS);
 
+        // --- Metricas --------------------------------------------------------
+        // El modulo entero es de la DUENA: son costos y margenes de principio a fin.
+        // Ninguna de las tres se queda en autenticado(), por lo mismo que compras.
+        requiere(HttpMethod.GET, "/api/v1/metricas/panel", Permiso.VER_METRICAS);
+        requiere(HttpMethod.GET, "/api/v1/metricas/sin-rotacion", Permiso.VER_METRICAS);
+        requiere(HttpMethod.GET, "/api/v1/metricas/vencimientos", Permiso.VER_METRICAS);
+
         // --- Inventario ------------------------------------------------------
         requiere(HttpMethod.POST, "/api/v1/inventario/carga-inicial", Permiso.CARGAR_INVENTARIO_INICIAL);
         requiere(HttpMethod.POST, "/api/v1/inventario/ajustes", Permiso.AJUSTAR_INVENTARIO);

@@ -56,7 +56,7 @@ public class ServicioProveedor {
 
     @Transactional
     public Proveedor actualizar(long id, PeticionesCompras.Proveedor peticion) {
-        Proveedor proveedor = buscar(id);
+        Proveedor proveedor = buscarEntidad(id);
         exigirNombreLibre(peticion.nombre(), id);
         aplicar(proveedor, peticion);
         return proveedorRepository.save(proveedor);
@@ -64,7 +64,7 @@ public class ServicioProveedor {
 
     @Transactional
     public ResultadoActivacionDto cambiarActivo(long id, boolean activo) {
-        Proveedor proveedor = buscar(id);
+        Proveedor proveedor = buscarEntidad(id);
         proveedor.setActivo(activo);
         proveedorRepository.save(proveedor);
         log.info("Proveedor {} {}", proveedor.getNombre(), activo ? "reactivado" : "desactivado");
@@ -76,7 +76,13 @@ public class ServicioProveedor {
         return proveedorRepository.findAll();
     }
 
-    public Proveedor buscar(long id) {
+    /**
+     * Uso interno entre servicios, nunca desde un controlador: devuelve la entidad
+     * de persistencia, no un DTO. Exponerla en un endpoint arrastra a la API los
+     * campos y las relaciones perezosas del modelo. Lo impide
+     * {@code ControladoresNoDevuelvenEntidadesTest}.
+     */
+    public Proveedor buscarEntidad(long id) {
         return proveedorRepository.findById(id).orElseThrow(() ->
                 ErrorDeAplicacion.noEncontrado("No existe el proveedor " + id));
     }

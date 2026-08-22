@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -20,6 +21,7 @@ import com.alejandriamakeup.pos.compras.dto.CompraDto;
 import com.alejandriamakeup.pos.compras.dto.PreviaAnulacionDto;
 import com.alejandriamakeup.pos.compras.dto.PreviaRecepcionDto;
 import com.alejandriamakeup.pos.config.Fechas;
+import com.alejandriamakeup.pos.dinero.Margen;
 import com.alejandriamakeup.pos.inventario.MovimientoInventario;
 import com.alejandriamakeup.pos.inventario.MovimientoInventarioRepository;
 import com.alejandriamakeup.pos.inventario.ServicioCostoPromedio;
@@ -43,16 +45,6 @@ import com.alejandriamakeup.pos.web.ErrorDeAplicacion;
 public class ServicioRecepcion {
 
     private static final Logger log = LoggerFactory.getLogger(ServicioRecepcion.class);
-
-    /**
-     * Por debajo de esto, la recepción avisa.
-     *
-     * <p>Vive aquí y no en el front a propósito: la pantalla muestra la advertencia
-     * que le manda el servidor, no una que calcule por su cuenta. Es el mismo criterio
-     * que "stock bajo" — dos implementaciones del mismo umbral acaban discrepando, y
-     * entonces nadie sabe cuál creer.
-     */
-    public static final int MARGEN_MINIMO_PORCENTAJE = 20;
 
     private final ServicioCompra servicioCompra;
     private final ServicioVariante servicioVariante;
@@ -87,7 +79,7 @@ public class ServicioRecepcion {
      * después va a quedar en el ledger.
      */
     public PreviaRecepcionDto previaDeRecepcion(long compraId) {
-        Compra compra = servicioCompra.buscar(compraId);
+        Compra compra = servicioCompra.buscarEntidad(compraId);
         exigirEstado(compra, EstadoCompra.BORRADOR,
                 "Solo se puede recibir una compra en borrador.");
 
@@ -100,7 +92,7 @@ public class ServicioRecepcion {
 
         for (CompraItem item : items) {
             long varianteId = item.getVariante().getId();
-            Variante variante = servicioVariante.buscar(varianteId);
+            Variante variante = servicioVariante.buscarEntidad(varianteId);
 
             long[] estado = corriente.computeIfAbsent(varianteId, id -> new long[] {
                     movimientoRepository.stockDe(id), variante.getCostoPromedio() });
@@ -114,12 +106,13 @@ public class ServicioRecepcion {
 
             long precio = variante.getPrecioVenta();
             boolean costoSuperaPrecio = promedioResultante > precio;
-            boolean margenBajo = margenPorDebajoDelMinimo(precio, promedioResultante);
+            boolean margenBajo = Margen.porDebajoDelMinimo(precio, promedioResultante);
 
             PreviaRecepcionDto.LineaDto linea = new PreviaRecepcionDto.LineaDto(
                     varianteId, item.getCantidad(), stockActual, stockResultante,
                     item.getCostoUnitario(), promedioActual, promedioResultante, precio,
-                    margenPorcentaje(precio, promedioResultante), costoSuperaPrecio, margenBajo);
+                    porcentajeParaMostrar(precio, promedioResultante),
+                    costoSuperaPrecio, margenBajo);
 
             lineas.add(linea);
             hayAdvertencias = hayAdvertencias || linea.tieneAdvertencia();
@@ -140,7 +133,7 @@ public class ServicioRecepcion {
      * factura la mencionaban.
      */
     public PreviaAnulacionDto previaDeAnulacion(long compraId) {
-        Compra compra = servicioCompra.buscar(compraId);
+        Compra compra = servicioCompra.buscarEntidad(compraId);
         exigirEstado(compra, EstadoCompra.RECIBIDA,
                 "Solo se puede anular una compra recibida.");
 
@@ -179,7 +172,7 @@ public class ServicioRecepcion {
      */
     @Transactional
     public CompraDto recibir(long compraId, long usuarioId) {
-        Compra compra = servicioCompra.buscar(compraId);
+        Compra compra = servicioCompra.buscarEntidad(compraId);
         exigirEstado(compra, EstadoCompra.BORRADOR,
                 "Una compra solo se recibe una vez.");
 
@@ -231,7 +224,7 @@ public class ServicioRecepcion {
      */
     @Transactional
     public CompraDto anular(long compraId, String motivo, long usuarioId) {
-        Compra compra = servicioCompra.buscar(compraId);
+        Compra compra = servicioCompra.buscarEntidad(compraId);
         exigirEstado(compra, EstadoCompra.RECIBIDA,
                 "Solo se puede anular una compra recibida. Un borrador se descarta, que es "
                         + "distinto: no hay nada que devolver.");
@@ -267,27 +260,12 @@ public class ServicioRecepcion {
     // ------------------------------------------------------------------ cálculos
 
     /**
-     * Si el margen queda por debajo del mínimo, con aritmética entera exacta.
-     *
-     * <p>No se compara el porcentaje redondeado: un margen de 19,6% redondeado a 20
-     * dejaría de encender el aviso justo en el caso que el aviso existe para atrapar.
-     *
-     * <p>Un precio de cero o negativo cuenta siempre como margen bajo — no hay forma
-     * de ganar el 20% de nada.
+     * El porcentaje que espera el DTO. {@link Margen#porcentaje} devuelve {@code null}
+     * cuando no hay precio contra el cual calcularlo; aquí eso se muestra como 0
+     * porque la línea ya viene marcada con {@code margenBajo}, que es la que decide.
      */
-    private boolean margenPorDebajoDelMinimo(long precio, long costo) {
-        if (precio <= 0) {
-            return true;
-        }
-        return (precio - costo) * 100 < (long) MARGEN_MINIMO_PORCENTAJE * precio;
-    }
-
-    /** Redondeado, y solo para mostrar. Las banderas no salen de aquí. */
-    private int margenPorcentaje(long precio, long costo) {
-        if (precio <= 0) {
-            return 0;
-        }
-        return (int) Math.round((precio - costo) * 100.0 / precio);
+    private int porcentajeParaMostrar(long precio, long costo) {
+        return Objects.requireNonNullElse(Margen.porcentaje(precio, costo), 0);
     }
 
     private void exigirConLineas(Compra compra, List<CompraItem> items) {

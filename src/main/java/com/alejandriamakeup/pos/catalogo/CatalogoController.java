@@ -71,13 +71,13 @@ public class CatalogoController {
     @PostMapping("/marcas")
     @ResponseStatus(HttpStatus.CREATED)
     public CatalogoDto.MarcaDto crearMarca(@Valid @RequestBody PeticionesCatalogo.Marca peticion) {
-        return aDto(servicioMarca.crear(peticion.nombre()));
+        return servicioMarca.crearDto(peticion.nombre());
     }
 
     @PutMapping("/marcas/{id}")
     public CatalogoDto.MarcaDto renombrarMarca(@PathVariable long id,
                                                @Valid @RequestBody PeticionesCatalogo.Marca peticion) {
-        return aDto(servicioMarca.renombrar(id, peticion.nombre()));
+        return servicioMarca.renombrarDto(id, peticion.nombre());
     }
 
     @PostMapping("/marcas/{id}/desactivacion")
@@ -96,13 +96,13 @@ public class CatalogoController {
     @ResponseStatus(HttpStatus.CREATED)
     public CatalogoDto.CategoriaDto crearCategoria(
             @Valid @RequestBody PeticionesCatalogo.Categoria peticion) {
-        return aDto(servicioCategoria.crear(peticion.nombre()));
+        return servicioCategoria.crearDto(peticion.nombre());
     }
 
     @PutMapping("/categorias/{id}")
     public CatalogoDto.CategoriaDto renombrarCategoria(
             @PathVariable long id, @Valid @RequestBody PeticionesCatalogo.Categoria peticion) {
-        return aDto(servicioCategoria.renombrar(id, peticion.nombre()));
+        return servicioCategoria.renombrarDto(id, peticion.nombre());
     }
 
     @PostMapping("/categorias/{id}/desactivacion")
@@ -121,13 +121,13 @@ public class CatalogoController {
     @ResponseStatus(HttpStatus.CREATED)
     public CatalogoDto.ProductoDto crearProducto(
             @Valid @RequestBody PeticionesCatalogo.Producto peticion) {
-        return aDto(servicioProducto.crear(peticion));
+        return servicioProducto.crearDto(peticion);
     }
 
     @PutMapping("/productos/{id}")
     public CatalogoDto.ProductoDto actualizarProducto(
             @PathVariable long id, @Valid @RequestBody PeticionesCatalogo.Producto peticion) {
-        return aDto(servicioProducto.actualizar(id, peticion));
+        return servicioProducto.actualizarDto(id, peticion);
     }
 
     @PostMapping("/productos/{id}/desactivacion")
@@ -146,16 +146,13 @@ public class CatalogoController {
     @ResponseStatus(HttpStatus.CREATED)
     public CatalogoDto.VarianteDto crearVariante(
             @Valid @RequestBody PeticionesCatalogo.Variante peticion) {
-        // Recién creada: cero movimientos, y por eso el catálogo todavía no la lista.
-        // Aparece cuando se recibe la compra o se hace la carga inicial.
-        return aDto(servicioVariante.crear(peticion), 0L, false);
+        return servicioVariante.crearDto(peticion);
     }
 
     @PutMapping("/variantes/{id}")
     public CatalogoDto.VarianteDto actualizarVariante(
             @PathVariable long id, @Valid @RequestBody PeticionesCatalogo.Variante peticion) {
-        return aDto(servicioVariante.actualizar(id, peticion), null,
-                servicioVariante.tieneMovimientos(id));
+        return servicioVariante.actualizarDto(id, peticion);
     }
 
     @PostMapping("/variantes/{id}/desactivacion")
@@ -166,54 +163,5 @@ public class CatalogoController {
     @PostMapping("/variantes/{id}/reactivacion")
     public ResultadoActivacionDto reactivarVariante(@PathVariable long id) {
         return servicioVariante.cambiarActivo(id, true);
-    }
-
-    // ----------------------------------------------------------------- mapeo
-
-    private CatalogoDto.MarcaDto aDto(Marca marca) {
-        return new CatalogoDto.MarcaDto(marca.getId(), marca.getNombre(), marca.isActivo());
-    }
-
-    private CatalogoDto.CategoriaDto aDto(Categoria categoria) {
-        return new CatalogoDto.CategoriaDto(categoria.getId(), categoria.getNombre(),
-                categoria.isActivo());
-    }
-
-    private CatalogoDto.ProductoDto aDto(Producto producto) {
-        return new CatalogoDto.ProductoDto(producto.getId(), producto.getNombre(),
-                producto.getMarca().getId(), producto.getCategoria().getId(),
-                producto.getDescripcion(), producto.isActivo());
-    }
-
-    /**
-     * El stock no se recalcula al escribir una variante: quien acaba de crearla sabe
-     * que está en cero, y quien la edita ya tiene el catálogo cargado. Pedirlo aquí
-     * sería una consulta por cada guardado para un dato que el cliente no usa.
-     */
-    private CatalogoDto.VarianteDto aDto(Variante variante, Long stock, boolean conHistorial) {
-        return new CatalogoDto.VarianteDto(
-                variante.getId(),
-                variante.getProducto().getId(),
-                // La misma función que congela la descripción al vender y que imprime el
-                // recibo: ver Descripcion. Aquí sí se navegan las asociaciones porque es
-                // una variante suelta que se acaba de escribir, no un catálogo entero.
-                Descripcion.de(variante.getProducto().getMarca().getNombre(),
-                        variante.getProducto().getNombre(),
-                        variante.getTono(),
-                        variante.getTamano()),
-                variante.getTono(),
-                variante.getTamano(),
-                variante.getCodigoBarras(),
-                variante.getPrecioVenta(),
-                variante.getStockMinimo(),
-                stock == null ? 0L : stock,
-                conHistorial,
-                // La bandera, no el importe. Una variante recién creada desde el flujo
-                // de compra sale de aquí con costo cero — que es la verdad: la
-                // mercancía todavía no llegó.
-                variante.getCostoPromedio() == 0,
-                variante.getFechaVencimiento(),
-                variante.getPaoMeses(),
-                variante.isActivo());
     }
 }

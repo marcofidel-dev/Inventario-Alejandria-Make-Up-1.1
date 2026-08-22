@@ -245,11 +245,12 @@ En SQLite agregar una FK a una tabla existente obliga a reconstruirla. Todo lo d
 ### 11.2 Se pueden agregar después
 
 - ~~**Búsqueda en el POS.**~~ **Hecho.** `BuscadorDeVariante` filtra en memoria sobre el catálogo ya cargado, cruzando marca, producto, tono y tamaño a la vez, y lo usan tanto la captura de compras como el cobro. Se sirve de `catalogo.filas` —solo variantes con historial—, porque no se puede vender lo que nunca entró.
-- **Métricas concretas.** Está el módulo pero no la lista: ventas por día/semana/mes, margen bruto, productos más vendidos, productos sin rotación, valor total del inventario a costo, alertas de stock bajo, ventas por método de pago, comparativo entre períodos.
+- ~~**Métricas concretas.**~~ **Hecho en la Fase 11, backend.** Ventas por día, semana y mes con comparativo contra el período anterior, margen bruto, productos más vendidos por unidades y por margen aportado —dos listas, porque lo que más sale no es lo que más deja—, productos sin rotación, valor del inventario a costo, stock bajo mínimo, ventas por método de pago y vencimientos. Todo sale de una sola fuente de líneas vendidas, `VentaItemRepository.lineasVendidas`, con los dos filtros que hacen verdadero el número aplicados una vez: solo ventas COMPLETADAS e ingreso neto del descuento prorrateado. **Sin pantalla todavía.**
 - **Exportar a Excel** para el contador.
 - **Enviar recibo por WhatsApp** (adjuntar el PDF).
 - **Conteo físico / inventario cíclico** — pantalla para contar y generar ajustes en lote.
-- **Alertas de vencimiento y PAO** — los campos existen, falta la lógica.
+- ~~**Alertas de vencimiento.**~~ **Hecho en la Fase 11.** Vencidos y por vencer en 30, 60 y 90 días, comparando fechas contra fechas y nunca contra un instante: un producto que vence hoy todavía se puede vender.
+- **PAO — columna muerta, y hay que decidir.** `variante.pao_meses` existe desde la V2 y **no se puede usar para nada tal como está el sistema**. El PAO (*period after opening*) cuenta los meses desde que el envase se **abre**, y no hay ningún sitio donde se registre esa apertura: sin fecha de apertura no hay desde cuándo contar, y la columna no es un dato incompleto sino un dato imposible. La Fase 11 lo dejó viajando en las filas de vencimiento como valor informativo y nada más. Lo que le falta para servir: **registrar la apertura de una unidad** —probablemente un movimiento de inventario nuevo, o una tabla de unidades abiertas para las testers del mostrador, que son las que de verdad se abren y se quedan meses—, y recién ahí una alerta de PAO significa algo. Queda anotado igual que clientes y descuentos y por la misma razón: una columna que nadie llena es indistinguible de un olvido, y dentro de un año nadie va a recordar cuál de las dos cosas era.
 - **Gastos operativos** más allá de los que salen de caja.
 
 ---

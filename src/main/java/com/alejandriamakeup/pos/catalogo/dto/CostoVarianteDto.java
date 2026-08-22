@@ -1,11 +1,15 @@
 package com.alejandriamakeup.pos.catalogo.dto;
 
+import com.alejandriamakeup.pos.dinero.Margen;
+
 /**
  * Costo y margen de una variante. Solo sale por el endpoint que exige
  * {@code VER_COSTOS_Y_MARGENES}.
  *
- * <p>El margen se calcula aquí y no se guarda: es {@code precio - costo}, derivable
- * en cualquier momento, y guardarlo sería otro dato que puede quedar desfasado.
+ * <p>El margen se calcula y no se guarda: es {@code precio - costo}, derivable en
+ * cualquier momento, y guardarlo sería otro dato que puede quedar desfasado. La
+ * fórmula sale de {@link Margen}, la misma que usan la previa de recepción y las
+ * métricas: escrita tres veces, tarde o temprano una de las tres se desvía.
  */
 public record CostoVarianteDto(
         Long varianteId,
@@ -18,13 +22,10 @@ public record CostoVarianteDto(
     public static CostoVarianteDto de(Long varianteId, String marca, String producto,
                                       String tono, String tamano,
                                       long precioVenta, long costoPromedio) {
-        long margen = precioVenta - costoPromedio;
-        Integer porcentaje = precioVenta > 0
-                ? (int) Math.round(margen * 100.0 / precioVenta)
-                : null;
-
         return new CostoVarianteDto(varianteId, descripcion(marca, producto, tono, tamano),
-                precioVenta, costoPromedio, margen, porcentaje);
+                precioVenta, costoPromedio,
+                Margen.de(precioVenta, costoPromedio),
+                Margen.porcentaje(precioVenta, costoPromedio));
     }
 
     private static String descripcion(String marca, String producto, String tono, String tamano) {

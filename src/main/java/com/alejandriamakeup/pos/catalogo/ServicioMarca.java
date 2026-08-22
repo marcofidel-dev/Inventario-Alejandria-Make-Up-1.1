@@ -1,6 +1,5 @@
 package com.alejandriamakeup.pos.catalogo;
 
-import java.util.List;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -8,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.alejandriamakeup.pos.catalogo.dto.CatalogoDto;
 import com.alejandriamakeup.pos.catalogo.dto.ResultadoActivacionDto;
 import com.alejandriamakeup.pos.web.ErrorDeAplicacion;
 
@@ -35,6 +35,7 @@ public class ServicioMarca {
         this.marcaRepository = marcaRepository;
     }
 
+    /** Uso interno entre servicios y pruebas. Desde la API va {@link #crearDto(String)}. */
     @Transactional
     public Marca crear(String nombre) {
         exigirNombreLibre(nombre, null);
@@ -48,9 +49,10 @@ public class ServicioMarca {
         return guardada;
     }
 
+    /** Uso interno. Desde la API va {@link #renombrarDto(long, String)}. */
     @Transactional
     public Marca renombrar(long id, String nombre) {
-        Marca marca = buscar(id);
+        Marca marca = buscarEntidad(id);
         exigirNombreLibre(nombre, id);
         marca.setNombre(nombre.strip());
         return marcaRepository.save(marca);
@@ -58,18 +60,41 @@ public class ServicioMarca {
 
     @Transactional
     public ResultadoActivacionDto cambiarActivo(long id, boolean activo) {
-        Marca marca = buscar(id);
+        Marca marca = buscarEntidad(id);
         marca.setActivo(activo);
         marcaRepository.save(marca);
         log.info("Marca {} {}", marca.getNombre(), activo ? "reactivada" : "desactivada");
         return ResultadoActivacionDto.sinAdvertencia(marca.getId(), marca.getNombre(), activo);
     }
 
-    public List<Marca> todas() {
-        return marcaRepository.findAll();
+    /**
+     * Lo que responde el endpoint. El mapeo a DTO vive aquí y no en el controlador
+     * porque las asociaciones son LAZY: mapearlas con la sesión ya cerrada lanza
+     * {@code LazyInitializationException}, que en el mostrador se ve como un 500 al
+     * guardar. Dentro de la transacción es un acceso normal.
+     */
+    @Transactional
+    public CatalogoDto.MarcaDto crearDto(String nombre) {
+        return aDto(crear(nombre));
     }
 
-    public Marca buscar(long id) {
+    /** Ver {@link #crearDto(String)}: el mapeo va dentro de la transacción. */
+    @Transactional
+    public CatalogoDto.MarcaDto renombrarDto(long id, String nombre) {
+        return aDto(renombrar(id, nombre));
+    }
+
+    private CatalogoDto.MarcaDto aDto(Marca marca) {
+        return new CatalogoDto.MarcaDto(marca.getId(), marca.getNombre(), marca.isActivo());
+    }
+
+    /**
+     * Uso interno entre servicios, nunca desde un controlador: devuelve la entidad
+     * de persistencia, no un DTO. Exponerla en un endpoint arrastra a la API los
+     * campos y las relaciones perezosas del modelo. Lo impide
+     * {@code ControladoresNoDevuelvenEntidadesTest}.
+     */
+    public Marca buscarEntidad(long id) {
         return marcaRepository.findById(id).orElseThrow(() ->
                 ErrorDeAplicacion.noEncontrado("No existe la marca " + id));
     }

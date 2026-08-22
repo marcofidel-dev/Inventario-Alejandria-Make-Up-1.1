@@ -59,7 +59,7 @@ public class ServicioCompra {
 
     @Transactional
     public CompraDto crearBorrador(PeticionesCompras.Compra peticion, long usuarioId) {
-        Proveedor proveedor = servicioProveedor.buscar(peticion.proveedorId());
+        Proveedor proveedor = servicioProveedor.buscarEntidad(peticion.proveedorId());
         if (!proveedor.isActivo()) {
             throw ErrorDeAplicacion.conflicto("PROVEEDOR_INACTIVO",
                     "El proveedor \"" + proveedor.getNombre() + "\" está desactivado. Hay que "
@@ -86,11 +86,11 @@ public class ServicioCompra {
 
     @Transactional
     public CompraDto actualizarBorrador(long id, PeticionesCompras.Compra peticion) {
-        Compra compra = buscar(id);
+        Compra compra = buscarEntidad(id);
         exigirEstado(compra, EstadoCompra.BORRADOR,
                 "Solo se puede editar una compra en borrador.");
 
-        Proveedor proveedor = servicioProveedor.buscar(peticion.proveedorId());
+        Proveedor proveedor = servicioProveedor.buscarEntidad(peticion.proveedorId());
         compra.setProveedor(proveedor);
         compra.setNumeroFactura(vacioComoNulo(peticion.numeroFactura()));
         compra.setNotas(vacioComoNulo(peticion.notas()));
@@ -107,7 +107,7 @@ public class ServicioCompra {
      */
     @Transactional
     public CompraDto descartar(long id, String motivo, long usuarioId) {
-        Compra compra = buscar(id);
+        Compra compra = buscarEntidad(id);
         exigirEstado(compra, EstadoCompra.BORRADOR,
                 "Solo se puede descartar una compra en borrador. Una compra recibida se anula, "
                         + "que es distinto: hay stock que devolver.");
@@ -135,11 +135,17 @@ public class ServicioCompra {
     }
 
     public CompraDto porId(long id) {
-        Compra compra = buscar(id);
+        Compra compra = buscarEntidad(id);
         return CompraDto.de(compra, itemsDe(compra.getId()));
     }
 
-    public Compra buscar(long id) {
+    /**
+     * Uso interno entre servicios, nunca desde un controlador: devuelve la entidad
+     * de persistencia, no un DTO. Exponerla en un endpoint arrastra a la API los
+     * campos y las relaciones perezosas del modelo. Lo impide
+     * {@code ControladoresNoDevuelvenEntidadesTest}.
+     */
+    public Compra buscarEntidad(long id) {
         return compraRepository.findById(id).orElseThrow(() ->
                 ErrorDeAplicacion.noEncontrado("No existe la compra " + id));
     }
@@ -164,7 +170,7 @@ public class ServicioCompra {
         long total = 0;
 
         for (PeticionesCompras.Compra.Linea linea : lineas) {
-            Variante variante = servicioVariante.buscar(linea.varianteId());
+            Variante variante = servicioVariante.buscarEntidad(linea.varianteId());
 
             // El subtotal se calcula, no se recibe. Una linea repetida de la misma
             // variante es legitima: una factura real trae dos lotes del mismo tono a

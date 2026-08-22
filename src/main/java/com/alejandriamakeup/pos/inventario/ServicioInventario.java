@@ -71,7 +71,7 @@ public class ServicioInventario {
         List<MovimientoInventarioDto> registrados = new ArrayList<>();
 
         for (PeticionesInventario.CargaInicial.Linea linea : peticion.lineas()) {
-            Variante variante = servicioVariante.buscar(linea.varianteId());
+            Variante variante = servicioVariante.buscarEntidad(linea.varianteId());
 
             if (movimientoRepository.existsByVarianteIdAndTipo(
                     variante.getId(), TipoMovimientoInventario.CARGA_INICIAL)) {
@@ -119,7 +119,7 @@ public class ServicioInventario {
         }
 
         Usuario usuario = usuario(usuarioId);
-        Variante variante = servicioVariante.buscar(peticion.varianteId());
+        Variante variante = servicioVariante.buscarEntidad(peticion.varianteId());
 
         MovimientoInventario movimiento = movimientoRepository.save(MovimientoInventario.builder()
                 .variante(variante)

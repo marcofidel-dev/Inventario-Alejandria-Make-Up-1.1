@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.alejandriamakeup.pos.catalogo.dto.CatalogoDto;
 import com.alejandriamakeup.pos.catalogo.dto.PeticionesCatalogo;
 import com.alejandriamakeup.pos.catalogo.dto.ResultadoActivacionDto;
 import com.alejandriamakeup.pos.config.Fechas;
@@ -42,10 +43,11 @@ public class ServicioProducto {
         this.servicioCategoria = servicioCategoria;
     }
 
+    /** Uso interno entre servicios y pruebas. Desde la API va {@link #crearDto}. */
     @Transactional
     public Producto crear(PeticionesCatalogo.Producto peticion) {
-        Marca marca = servicioMarca.buscar(peticion.marcaId());
-        Categoria categoria = servicioCategoria.buscar(peticion.categoriaId());
+        Marca marca = servicioMarca.buscarEntidad(peticion.marcaId());
+        Categoria categoria = servicioCategoria.buscarEntidad(peticion.categoriaId());
         exigirNombreLibreEnLaMarca(peticion.nombre(), marca, null);
 
         Producto producto = new Producto();
@@ -61,11 +63,12 @@ public class ServicioProducto {
         return guardado;
     }
 
+    /** Uso interno. Desde la API va {@link #actualizarDto}. */
     @Transactional
     public Producto actualizar(long id, PeticionesCatalogo.Producto peticion) {
-        Producto producto = buscar(id);
-        Marca marca = servicioMarca.buscar(peticion.marcaId());
-        Categoria categoria = servicioCategoria.buscar(peticion.categoriaId());
+        Producto producto = buscarEntidad(id);
+        Marca marca = servicioMarca.buscarEntidad(peticion.marcaId());
+        Categoria categoria = servicioCategoria.buscarEntidad(peticion.categoriaId());
         exigirNombreLibreEnLaMarca(peticion.nombre(), marca, id);
 
         producto.setNombre(peticion.nombre().strip());
@@ -77,7 +80,7 @@ public class ServicioProducto {
 
     @Transactional
     public ResultadoActivacionDto cambiarActivo(long id, boolean activo) {
-        Producto producto = buscar(id);
+        Producto producto = buscarEntidad(id);
         producto.setActivo(activo);
         productoRepository.save(producto);
 
@@ -94,7 +97,36 @@ public class ServicioProducto {
         return new ResultadoActivacionDto(producto.getId(), producto.getNombre(), activo, advertencia);
     }
 
-    public Producto buscar(long id) {
+    /**
+     * Lo que responde el endpoint. El mapeo a DTO vive aquí y no en el controlador
+     * porque las asociaciones son LAZY: mapearlas con la sesión ya cerrada lanza
+     * {@code LazyInitializationException}, que en el mostrador se ve como un 500 al
+     * guardar. Dentro de la transacción es un acceso normal.
+     */
+    @Transactional
+    public CatalogoDto.ProductoDto crearDto(PeticionesCatalogo.Producto peticion) {
+        return aDto(crear(peticion));
+    }
+
+    /** Ver {@link #crearDto}: el mapeo va dentro de la transacción. */
+    @Transactional
+    public CatalogoDto.ProductoDto actualizarDto(long id, PeticionesCatalogo.Producto peticion) {
+        return aDto(actualizar(id, peticion));
+    }
+
+    private CatalogoDto.ProductoDto aDto(Producto producto) {
+        return new CatalogoDto.ProductoDto(producto.getId(), producto.getNombre(),
+                producto.getMarca().getId(), producto.getCategoria().getId(),
+                producto.getDescripcion(), producto.isActivo());
+    }
+
+    /**
+     * Uso interno entre servicios, nunca desde un controlador: devuelve la entidad
+     * de persistencia, no un DTO. Exponerla en un endpoint arrastra a la API los
+     * campos y las relaciones perezosas del modelo. Lo impide
+     * {@code ControladoresNoDevuelvenEntidadesTest}.
+     */
+    public Producto buscarEntidad(long id) {
         return productoRepository.findById(id).orElseThrow(() ->
                 ErrorDeAplicacion.noEncontrado("No existe el producto " + id));
     }
