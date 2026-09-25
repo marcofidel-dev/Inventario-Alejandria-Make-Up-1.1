@@ -38,6 +38,7 @@ const CONTADOR = src('componentes', 'ContadorDeDenominaciones.jsx')
 const MODAL = src('componentes', 'Modal.jsx')
 const MARCAS = src('pantallas', 'MarcasYCategorias.jsx')
 const BUSCADOR = src('componentes', 'BuscadorDeVariante.jsx')
+const METRICAS = src('pantallas', 'Metricas.jsx')
 
 function sustituir(de, a) {
   return (contenido) => {
@@ -480,6 +481,66 @@ const CASOS = [
     romper: sustituir(
       'suma + denominacion * (Number(conteo[denominacion]) || 0)',
       'suma + denominacion + (Number(conteo[denominacion]) || 0)'),
+  },
+  {
+    regla: 'el margen porcentual nulo es "sin datos", no 0 %',
+    archivo: METRICAS,
+    pruebas: 'pruebas/Metricas.prueba.jsx',
+    debeCaer: 'el margen porcentual nulo se muestra como',
+    romper: sustituir(
+      "cifra={actual.margenPorcentaje === null ? '—' : `${actual.margenPorcentaje} %`}",
+      'cifra={`${actual.margenPorcentaje ?? 0} %`}',
+    ),
+  },
+  {
+    regla: 'sin ventas en el periodo anterior no se muestra variación',
+    archivo: METRICAS,
+    pruebas: 'pruebas/Metricas.prueba.jsx',
+    debeCaer: 'si el periodo anterior no tuvo ventas',
+    romper: sustituir('const comparable = anterior.ventas > 0', 'const comparable = true'),
+  },
+  {
+    regla: 'el detalle de vencimientos se pide una vez y solo al abrirlo',
+    archivo: METRICAS,
+    pruebas: 'pruebas/Metricas.prueba.jsx',
+    debeCaer: 'el detalle se pide al pulsar',
+    romper: sustituir('    if (detalle || cargando) return\n', ''),
+  },
+  {
+    regla: 'un cero en vencidos no se pinta de error',
+    archivo: METRICAS,
+    pruebas: 'pruebas/Metricas.prueba.jsx',
+    debeCaer: 'un cero en vencidos no se pinta de error',
+    romper: sustituir("tono={conteos.vencidos > 0 ? 'error' : undefined}", "tono=\"error\""),
+  },
+  {
+    regla: 'el stock negativo se distingue del stock bajo',
+    archivo: METRICAS,
+    pruebas: 'pruebas/Metricas.prueba.jsx',
+    debeCaer: 'el inventario muestra valor, unidades',
+    romper: sustituir('{fila.stock < 0\n', '{false\n'),
+  },
+  {
+    regla: 'cada ranking respeta el orden que manda el backend',
+    archivo: METRICAS,
+    pruebas: 'pruebas/Metricas.prueba.jsx',
+    debeCaer: 'muestra dos rankings y respeta el orden',
+    romper: sustituir('{filas.map((fila, indice) => (\n                <tr key={fila.varianteId}>\n                  <td>{indice + 1}</td>',
+      '{[...filas].sort((a, b) => b.unidades - a.unidades).map((fila, indice) => (\n                <tr key={fila.varianteId}>\n                  <td>{indice + 1}</td>'),
+  },
+  {
+    regla: 'el mes navega desde el día 1: un 31 de marzo atrás es febrero, no el 3 de marzo',
+    archivo: METRICAS,
+    pruebas: 'pruebas/Metricas.prueba.jsx',
+    debeCaer: 'desde 2026-03-31 va a 2026-02-01',
+    romper: sustituir('fecha.getMonth() + sentido, 1))', 'fecha.getMonth() + sentido, fecha.getDate()))'),
+  },
+  {
+    regla: 'las métricas son de la DUENA: la EMPLEADA no las tiene ni en el DOM',
+    archivo: ARMAZON,
+    pruebas: 'pruebas/Navegacion.prueba.jsx',
+    debeCaer: 'la EMPLEADA no tiene Compras ni Métricas en el DOM',
+    romper: sustituir('    permiso: PERMISOS.verMetricas,\n', ''),
   },
 ]
 

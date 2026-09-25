@@ -491,3 +491,133 @@
 .arqueo__diferencia--favor  { color: var(--diferencia-favor); }
 .arqueo__diferencia--contra { color: var(--diferencia-contra); }
 .arqueo__diferencia--neutro { color: var(--texto-secundario); }
+
+/* ---------------------------------------------------------------- Metricas */
+
+.metricas__controles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--e-3);
+  margin-bottom: var(--e-4);
+}
+
+/* Tres opciones excluyentes, pegadas: se lee como un solo control. */
+.metricas__periodos {
+  display: flex;
+  border: var(--separador-fuerte);
+  border-radius: var(--radio);
+  overflow: hidden;
+}
+
+.metricas__periodo {
+  min-height: var(--alto-control);
+  padding: 0 var(--e-4);
+  border: none;
+  background: transparent;
+  color: var(--texto-secundario);
+  font-family: var(--fuente-ui);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medio);
+  transition: background var(--mov-instantaneo) var(--curva);
+}
+
+.metricas__periodo:hover { background: var(--fondo-hundido); }
+
+.metricas__periodo[aria-selected='true'] {
+  background: var(--accion-suave);
+  color: var(--accion);
+}
+
+.metricas__periodo-texto { margin-bottom: var(--e-4); }
+
+.metricas__seccion { margin-top: var(--e-8); }
+
+.metricas__explicacion { margin-bottom: var(--e-4); }
+
+.metricas__nota {
+  margin-top: var(--e-8);
+  font-size: var(--texto-xs);
+  color: var(--texto-tenue);
+}
+
+.metricas__nota summary { cursor: pointer; }
+.metricas__nota p { margin-top: var(--e-2); max-width: var(--ancho-modal); }
+
+.tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--ancho-tarjeta), 1fr));
+  gap: var(--e-3);
+  margin-bottom: var(--e-4);
+}
+
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  padding: var(--e-4);
+  border: var(--separador);
+  border-radius: var(--radio);
+  background: var(--superficie-alta);
+}
+
+.tarjeta__titulo {
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-medio);
+  color: var(--texto-secundario);
+}
+
+.tarjeta__cifra {
+  font-size: var(--texto-2xl);
+  line-height: var(--interlinea-apretada);
+}
+
+.tarjeta__detalle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-1);
+  font-size: var(--texto-xs);
+  color: var(--texto-tenue);
+}
+
+/* Solo el color de estado cuando hay algo que mirar. El texto de la tarjeta hereda
+   el del semantico: el par texto/fondo ya esta verificado por las guardas. */
+.tarjeta--error  { background: var(--error-fondo);  color: var(--error); border-color: transparent; }
+.tarjeta--alerta { background: var(--alerta-fondo); color: var(--alerta); border-color: transparent; }
+.tarjeta--error .tarjeta__titulo,
+.tarjeta--alerta .tarjeta__titulo { color: inherit; }
+
+.variacion--sube  { color: var(--exito); }
+.variacion--baja  { color: var(--error); }
+.variacion--igual { color: var(--texto-secundario); }
+
+.barras {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.barras__texto {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--e-4);
+  margin-bottom: var(--e-1);
+  font-size: var(--texto-sm);
+}
+
+/* Neutra a proposito: el rosa de accion significa "se puede pulsar". */
+.barra {
+  height: var(--e-2);
+  border-radius: var(--radio-completo);
+  background: var(--fondo-hundido);
+  overflow: hidden;
+}
+
+.barra__relleno {
+  height: 100%;
+  background: var(--texto-secundario);
+}

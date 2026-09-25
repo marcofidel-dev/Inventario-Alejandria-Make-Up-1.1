@@ -220,7 +220,7 @@ function AnularVenta({ venta, alCerrar, alAnular }) {
 }
 
 /** Hoy en local, en el formato que espera <input type="date">. */
-function hoy() {
+export function hoy() {
   const ahora = new Date()
   const mes = String(ahora.getMonth() + 1).padStart(2, '0')
   const dia = String(ahora.getDate()).padStart(2, '0')

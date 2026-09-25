@@ -284,3 +284,109 @@ export function fetchFalso(rutas) {
     }
   })
 }
+
+/**
+ * Un resumen con la forma de MetricasDto.Resumen. El costo y el margen van puestos a
+ * mano, no derivados del ingreso: el servidor los calcula y el fixture no puede
+ * confundirse con la pantalla.
+ */
+export function resumenDeMetricas(campos = {}) {
+  return {
+    ventas: 12,
+    unidades: 30,
+    ingreso: 600000,
+    costo: 360000,
+    margen: 240000,
+    margenPorcentaje: 40,
+    ...campos,
+  }
+}
+
+/** Un resumen de un periodo sin ventas: todo en cero y el porcentaje en NULL, no en 0. */
+export const RESUMEN_SIN_VENTAS = {
+  ventas: 0, unidades: 0, ingreso: 0, costo: 0, margen: 0, margenPorcentaje: null,
+}
+
+/** El panel con la forma de MetricasDto.Panel, de un dia con ventas. */
+export function panelDePrueba(campos = {}) {
+  return {
+    agrupacion: 'FECHA_DE_VENTA',
+    periodo: { tipo: 'DIA', desde: '2026-08-15', hasta: '2026-08-15' },
+    periodoAnterior: { tipo: 'DIA', desde: '2026-08-14', hasta: '2026-08-14' },
+    actual: resumenDeMetricas(),
+    anterior: resumenDeMetricas({ ventas: 10, unidades: 25, ingreso: 500000, costo: 300000,
+      margen: 200000, margenPorcentaje: 40 }),
+    porMetodoPago: [
+      { metodo: 'EFECTIVO', cantidad: 8, total: 400000 },
+      { metodo: 'NEQUI', cantidad: 4, total: 200000 },
+    ],
+    // Las dos listas van en ORDEN DISTINTO a proposito: lo que se comprueba es que la
+    // pantalla respeta el orden de cada una y no reordena por su cuenta.
+    masVendidosPorUnidades: [
+      { varianteId: 1, descripcion: 'Essence|Delineador|Negro', unidades: 9, ingreso: 90000,
+        costo: 63000, margen: 27000, margenPorcentaje: 30 },
+      { varianteId: 2, descripcion: 'Loréal|Base líquida|Beige', unidades: 3, ingreso: 210000,
+        costo: 90000, margen: 120000, margenPorcentaje: 57 },
+    ],
+    masVendidosPorMargen: [
+      { varianteId: 2, descripcion: 'Loréal|Base líquida|Beige', unidades: 3, ingreso: 210000,
+        costo: 90000, margen: 120000, margenPorcentaje: 57 },
+      { varianteId: 1, descripcion: 'Essence|Delineador|Negro', unidades: 9, ingreso: 90000,
+        costo: 63000, margen: 27000, margenPorcentaje: 30 },
+    ],
+    inventario: {
+      valorACosto: 8450000,
+      unidades: 640,
+      variantesBajoMinimo: [
+        { varianteId: 3, descripcion: 'Maybelline|Máscara|Negra', stock: 1, stockMinimo: 4 },
+        { varianteId: 4, descripcion: 'Loréal|Labial mate|Nude', stock: -2, stockMinimo: 3 },
+      ],
+    },
+    vencimientos: { vencidos: 2, hasta30: 3, entre31y60: 1, entre61y90: 0 },
+    ...campos,
+  }
+}
+
+/** Un panel de un dia en que no se vendio nada, con la forma exacta que manda el backend. */
+export function panelSinVentas() {
+  return panelDePrueba({
+    actual: RESUMEN_SIN_VENTAS,
+    anterior: RESUMEN_SIN_VENTAS,
+    porMetodoPago: [],
+    masVendidosPorUnidades: [],
+    masVendidosPorMargen: [],
+    inventario: { valorACosto: 0, unidades: 0, variantesBajoMinimo: [] },
+    vencimientos: { vencidos: 0, hasta30: 0, entre31y60: 0, entre61y90: 0 },
+  })
+}
+
+/** MetricasDto.Vencimiento. */
+export function vencimientoDePrueba(campos = {}) {
+  return {
+    varianteId: 10,
+    descripcion: 'Essence|Sombra|Bronce',
+    fechaVencimiento: '2026-08-01',
+    diasParaVencer: -14,
+    stock: 5,
+    valorACosto: 25000,
+    paoMeses: null,
+    ...campos,
+  }
+}
+
+/** MetricasDto.SinRotacion. `aclaracion` es la que escribe el servidor. */
+export function sinRotacionDePrueba(campos = {}) {
+  return {
+    dias: 90,
+    agrupacion: 'FECHA_DE_VENTA',
+    aclaracion: 'Sin ventas en 90 días no es lo mismo que nunca vendido: esta lista no distingue '
+      + 'el producto que dejó de venderse del que jamás se vendió.',
+    filas: [
+      { varianteId: 20, descripcion: 'Essence|Rubor|Coral', stock: 6, costoPromedio: 12000,
+        valorACosto: 72000 },
+      { varianteId: 21, descripcion: 'Loréal|Polvo|Translúcido', stock: 2, costoPromedio: 30000,
+        valorACosto: 60000 },
+    ],
+    ...campos,
+  }
+}

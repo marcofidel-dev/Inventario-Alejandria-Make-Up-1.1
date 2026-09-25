@@ -12,6 +12,7 @@ import { Compras } from './pantallas/Compras.jsx'
 import { ConfiguracionInicial } from './pantallas/ConfiguracionInicial.jsx'
 import { Login } from './pantallas/Login.jsx'
 import { MarcasYCategorias } from './pantallas/MarcasYCategorias.jsx'
+import { Metricas, SinRotacion } from './pantallas/Metricas.jsx'
 import { Proveedores } from './pantallas/Proveedores.jsx'
 import { Venta } from './pantallas/Venta.jsx'
 import { Ventas } from './pantallas/Ventas.jsx'
@@ -111,6 +112,10 @@ function Contenido({ vista, catalogo, compras, alIrA }) {
       return <CargaInicial catalogo={catalogo} />
     case 'inventario/marcas':
       return <MarcasYCategorias catalogo={catalogo} />
+    case 'metricas/panel':
+      return <Metricas />
+    case 'metricas/sin-rotacion':
+      return <SinRotacion />
     default:
       return (
         <Proximamente titulo="Esta pantalla todavía no existe">

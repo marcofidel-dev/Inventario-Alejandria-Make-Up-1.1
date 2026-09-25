@@ -92,14 +92,26 @@ describe('Navegación', () => {
       .not.toContain('existencias')
   })
 
-  /** Lo que no existe se declara, pero no se puede pulsar. */
-  it('las secciones sin pantalla están deshabilitadas y lo dicen', () => {
+  /**
+   * Metricas dejo de ser una puerta cerrada: tiene pantalla. Ninguna seccion queda
+   * deshabilitada, y la DUENA entra a Metricas por su primera pestaña.
+   */
+  it('con las métricas construidas, ninguna sección está deshabilitada', () => {
     montar('DUENA', PERMISOS_DUENA)
 
-    expect(within(navegacion()).getByRole('button', { name: /Métricas/ })).toBeDisabled()
-    expect(within(navegacion()).getByRole('button', { name: /Compras/ })).toBeEnabled()
-    // Vender dejó de estar deshabilitada en la Fase 9: ya tiene pantalla.
-    expect(within(navegacion()).getByRole('button', { name: /Vender/ })).toBeEnabled()
+    for (const boton of within(navegacion()).getAllByRole('button')) {
+      expect(boton).toBeEnabled()
+    }
+    expect(within(navegacion()).queryByText('pronto')).not.toBeInTheDocument()
+  })
+
+  it('Métricas tiene sus dos pestañas y solo existe con el permiso', () => {
+    const deLaDuena = seccionesVisibles((permiso) => PERMISOS_DUENA.includes(permiso))
+    expect(deLaDuena.find((s) => s.id === 'metricas').pestanas.map((p) => p.id))
+      .toEqual(['panel', 'sin-rotacion'])
+
+    const deLaEmpleada = seccionesVisibles((permiso) => PERMISOS_EMPLEADA.includes(permiso))
+    expect(deLaEmpleada.find((s) => s.id === 'metricas')).toBeUndefined()
   })
 
   /**
@@ -111,5 +123,6 @@ describe('Navegación', () => {
 
     expect(pestanaInicialDe(secciones.find((s) => s.id === 'inventario'))).toBe('productos')
     expect(pestanaInicialDe(secciones.find((s) => s.id === 'compras'))).toBe('compras')
+    expect(pestanaInicialDe(secciones.find((s) => s.id === 'metricas'))).toBe('panel')
   })
 })

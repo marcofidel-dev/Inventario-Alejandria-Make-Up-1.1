@@ -79,7 +79,10 @@ const SECCIONES = [
     texto: 'Métricas',
     icono: BarChart3,
     permiso: PERMISOS.verMetricas,
-    proximamente: 'Las métricas llegan más adelante.',
+    pestanas: [
+      { id: 'panel', texto: 'Resumen' },
+      { id: 'sin-rotacion', texto: 'Sin rotación' },
+    ],
   },
 ]
 

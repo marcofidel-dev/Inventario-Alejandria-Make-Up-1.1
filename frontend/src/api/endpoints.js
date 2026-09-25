@@ -154,3 +154,16 @@ export const caja = {
   notas: (sesionId) => api.get(`/api/v1/caja/sesiones/${sesionId}/notas`),
   anotar: (sesionId, texto) => api.post(`/api/v1/caja/sesiones/${sesionId}/notas`, { texto }),
 }
+
+/**
+ * Solo la DUENA: todas las respuestas llevan costos o margenes.
+ *
+ * El panel principal es UNA llamada. Vencimientos y sin rotacion son detalles que se
+ * piden solo cuando alguien entra a mirarlos.
+ */
+export const metricas = {
+  panel: (periodo, fecha) =>
+    api.get(`/api/v1/metricas/panel?periodo=${periodo}&fecha=${fecha}`),
+  vencimientos: () => api.get('/api/v1/metricas/vencimientos'),
+  sinRotacion: (dias) => api.get(`/api/v1/metricas/sin-rotacion?dias=${dias}`),
+}
