@@ -156,6 +156,97 @@ export function AnularCompra({ compra, catalogo, alCerrar, alHecho }) {
   )
 }
 
+/**
+ * Corregir: anular la compra y, con las mismas lineas, abrir un borrador nuevo para
+ * editar y volver a recibir.
+ *
+ * ES UN TERCER ACTO, NO UN ALIAS DE ANULAR. Comparte con AnularCompra la previa y el
+ * aviso de negativos porque por debajo hace exactamente lo mismo primero -anular,
+ * con su misma reversion de stock-, pero el desenlace es distinto: aqui queda abierto
+ * un borrador nuevo, no una compra que se quedo anulada sin mas. Por eso el titulo y
+ * el texto del boton nombran ese segundo paso.
+ */
+export function CorregirCompra({ compra, catalogo, alCerrar, alHecho }) {
+  const [previa, setPrevia] = useState(null)
+  const [motivo, setMotivo] = useState('')
+  const [error, setError] = useState(null)
+  const [enviando, setEnviando] = useState(false)
+
+  useEffect(() => {
+    let vigente = true
+    apiCompras.previaDeAnulacion(compra.id)
+      .then((datos) => { if (vigente) setPrevia(datos) })
+      .catch((fallo) => { if (vigente) setError(fallo) })
+    return () => { vigente = false }
+  }, [compra.id])
+
+  async function corregir() {
+    if (!motivo.trim() || enviando) return
+    setEnviando(true)
+    setError(null)
+    try {
+      const { borrador } = await apiCompras.corregir(compra.id, motivo.trim())
+      await alHecho(borrador)
+    } catch (fallo) {
+      setError(fallo)
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  const negativas = previa?.lineas.filter((linea) => linea.quedaNegativo) ?? []
+
+  return (
+    <Modal
+      titulo={`Corregir la compra ${compra.consecutivo}`}
+      alCerrar={alCerrar}
+      acciones={
+        <>
+          <Boton variante="plano" onClick={alCerrar} disabled={enviando}>Cancelar</Boton>
+          <Boton variante="peligro" onClick={corregir} ocupado={enviando}
+                 disabled={!motivo.trim()} textoOcupado="Corrigiendo…">
+            Corregir y abrir un borrador
+          </Boton>
+        </>
+      }
+    >
+      <div className="formulario">
+        <Aviso tipo="alerta" titulo="Esto anula la compra y abre un borrador nuevo">
+          Se restan del inventario las unidades que entraron con esta compra —igual que al
+          anular— y queda un borrador nuevo con las mismas líneas para editar y volver a
+          recibir. Entre un paso y el otro, la mercancía sigue en la tienda pero el sistema
+          ya la descontó.
+        </Aviso>
+
+        {negativas.length > 0 && (
+          <Aviso tipo="error" titulo="Estas variantes quedan con stock negativo">
+            Ya se vendieron unidades de esta compra, así que al corregirla el sistema queda
+            debiendo existencias hasta que se reciba el borrador nuevo.
+            <ul className="aviso__detalles">
+              {negativas.map((linea) => (
+                <li key={linea.varianteId}>
+                  {describir(catalogo, linea.varianteId)}: {linea.stockActual} →{' '}
+                  {linea.stockResultante}
+                </li>
+              ))}
+            </ul>
+          </Aviso>
+        )}
+
+        <Campo
+          etiqueta="¿Por qué se corrige?"
+          value={motivo}
+          autoFocus
+          ayuda="Por ejemplo: la cantidad o el costo se registraron mal."
+          onChange={(e) => setMotivo(e.target.value)}
+        />
+
+        {error && <AvisoDeError error={error} />}
+      </div>
+    </Modal>
+  )
+}
+
 // Sobre `todas`: nombrar la variante de una compra no depende de que ya tenga
 // movimientos. Un borrador que se descarta se refiere justamente a las que no.
 function describir(catalogo, varianteId) {

@@ -7,7 +7,7 @@ import { Campo } from '../componentes/Campo.jsx'
 import { filtrarCompras } from '../compras/useCompras.js'
 import { PERMISOS, useSesion } from '../sesion/SesionContext.jsx'
 import { etiqueta } from '../etiquetas.js'
-import { AnularCompra, DescartarCompra } from './BajasDeCompra.jsx'
+import { AnularCompra, CorregirCompra, DescartarCompra } from './BajasDeCompra.jsx'
 import { formatearPesos } from './Catalogo.jsx'
 import { RecibirCompra } from './RecibirCompra.jsx'
 import { RegistrarCompra } from './RegistrarCompra.jsx'
@@ -43,11 +43,12 @@ export function Compras({ catalogo, compras }) {
 
   const volver = () => setVista({ tipo: 'listado' })
 
-  if (vista.tipo === 'registrar') {
+  if (vista.tipo === 'registrar' || vista.tipo === 'editar') {
     return (
       <RegistrarCompra
         catalogo={catalogo}
         compras={compras}
+        compraInicial={vista.tipo === 'editar' ? vista.compra : undefined}
         alCerrar={volver}
         alRecibir={(compra) => setVista({ tipo: 'recibir', compra })}
       />
@@ -164,6 +165,7 @@ export function Compras({ catalogo, compras }) {
                           alRecibir={() => setVista({ tipo: 'recibir', compra })}
                           alDescartar={() => setBaja({ tipo: 'descartar', compra })}
                           alAnular={() => setBaja({ tipo: 'anular', compra })}
+                          alCorregir={() => setBaja({ tipo: 'corregir', compra })}
                         />
                       </td>
                     </tr>
@@ -194,6 +196,19 @@ export function Compras({ catalogo, compras }) {
           }}
         />
       )}
+
+      {baja?.tipo === 'corregir' && (
+        <CorregirCompra
+          compra={baja.compra}
+          catalogo={catalogo}
+          alCerrar={() => setBaja(null)}
+          alHecho={async (borrador) => {
+            await Promise.all([catalogo.recargar(), compras.recargar()])
+            setBaja(null)
+            setVista({ tipo: 'editar', compra: borrador })
+          }}
+        />
+      )}
     </>
   )
 }
@@ -201,10 +216,14 @@ export function Compras({ catalogo, compras }) {
 /**
  * Las acciones dependen del estado, y DESCARTAR Y ANULAR NO APARECEN JUNTOS NUNCA:
  * descartar solo existe en BORRADOR y anular solo en RECIBIDA. Tampoco se parecen —
- * anular lleva el boton de peligro— porque una no revierte nada y la otra mueve el
- * inventario.
+ * porque una no revierte nada y la otra mueve el inventario.
+ *
+ * Corregir aparece junto a Anular en RECIBIDA y con el boton de peligro, porque por
+ * debajo hace lo mismo que Anular y ademas: es el camino esperado cuando la compra
+ * esta mal y se puede volver a capturar. Anular solo -sin abrir un borrador nuevo-
+ * sigue existiendo para cuando la mercancia nunca llego.
  */
-function Acciones({ compra, alRecibir, alDescartar, alAnular }) {
+function Acciones({ compra, alRecibir, alDescartar, alAnular, alCorregir }) {
   // Recibir y anular tienen permisos propios, distintos del que abre esta pestaña.
   // Hoy los tres son de la DUENA y la diferencia no se nota, pero preguntarlo aqui
   // es lo que evita que el dia que se le conceda uno solo a alguien se le ofrezcan
@@ -226,9 +245,12 @@ function Acciones({ compra, alRecibir, alDescartar, alAnular }) {
   }
 
   if (compra.estado === 'RECIBIDA') {
-    return puede(PERMISOS.anularCompras)
-      ? <Boton variante="peligro" onClick={alAnular}>Anular</Boton>
-      : null
+    return puede(PERMISOS.anularCompras) ? (
+      <>
+        <Boton variante="peligro" onClick={alCorregir}>Corregir</Boton>
+        <Boton variante="plano" onClick={alAnular}>Anular</Boton>
+      </>
+    ) : null
   }
 
   return <span className="texto-secundario">{compra.motivoBaja}</span>

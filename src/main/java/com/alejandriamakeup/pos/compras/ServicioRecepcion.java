@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.alejandriamakeup.pos.catalogo.ServicioVariante;
 import com.alejandriamakeup.pos.catalogo.Variante;
 import com.alejandriamakeup.pos.compras.dto.CompraDto;
+import com.alejandriamakeup.pos.compras.dto.CorreccionCompraDto;
 import com.alejandriamakeup.pos.compras.dto.PreviaAnulacionDto;
 import com.alejandriamakeup.pos.compras.dto.PreviaRecepcionDto;
 import com.alejandriamakeup.pos.config.Fechas;
@@ -255,6 +256,37 @@ public class ServicioRecepcion {
 
         log.info("Compra {} anulada: {}", compra.getConsecutivo(), motivo);
         return CompraDto.de(compra, items);
+    }
+
+    /**
+     * Corrige una compra recibida: la anula y, con sus mismas líneas, abre un borrador
+     * nuevo para editar y volver a recibir.
+     *
+     * <p>Es "anular" con un paso más, nunca una fórmula aparte para revertir stock:
+     * llama al mismo {@link #anular} de siempre, así que el recálculo del promedio y
+     * el trato del negativo son exactamente los de una anulación normal. Lo único que
+     * agrega es armar el borrador de reemplazo, con {@link ServicioCompra#crearBorradorDesde}.
+     *
+     * <p>Las líneas se leen <em>antes</em> de anular: {@code anular} no las toca —
+     * {@code CompraItem} no es el ledger—, pero leerlas primero deja claro que son las
+     * de la compra tal como estaba, no un efecto colateral del paso siguiente.
+     *
+     * <p>El stock queda descuadrado entre que se anula y se vuelve a recibir el
+     * borrador: la mercancía sigue en la tienda pero el sistema ya la descontó. Avisar
+     * de eso es trabajo de la pantalla, no de este método.
+     */
+    @Transactional
+    public CorreccionCompraDto corregir(long compraId, String motivo, long usuarioId) {
+        Compra compra = servicioCompra.buscarEntidad(compraId);
+        List<CompraItem> items = servicioCompra.itemsDe(compraId);
+        exigirConLineas(compra, items);
+
+        CompraDto anulada = anular(compraId, motivo, usuarioId);
+        CompraDto borrador = servicioCompra.crearBorradorDesde(compra, items, usuarioId);
+
+        log.info("Compra {} corregida: borrador {} abierto con {} línea(s)",
+                anulada.consecutivo(), borrador.consecutivo(), items.size());
+        return new CorreccionCompraDto(anulada, borrador);
     }
 
     // ------------------------------------------------------------------ cálculos

@@ -76,6 +76,12 @@ export const compras = {
    */
   recibir: (id) => api.post(`/api/v1/compras/${id}/recepcion`),
   anular: (id, motivo) => api.post(`/api/v1/compras/${id}/anulacion`, { motivo }),
+
+  /**
+   * Anula y abre un borrador nuevo con las mismas lineas, en una sola llamada.
+   * Devuelve {anulada, borrador}.
+   */
+  corregir: (id, motivo) => api.post(`/api/v1/compras/${id}/correccion`, { motivo }),
 }
 
 export const ventas = {
