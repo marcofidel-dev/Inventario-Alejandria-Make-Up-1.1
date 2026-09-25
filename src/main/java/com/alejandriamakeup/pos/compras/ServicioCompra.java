@@ -100,6 +100,30 @@ public class ServicioCompra {
     }
 
     /**
+     * Un borrador nuevo, precargado con las mismas líneas de {@code origen}.
+     *
+     * <p>Pasa por {@link #crearBorrador}, el mismo camino que un borrador tecleado a
+     * mano: consecutivo propio, proveedor del origen, y el total lo vuelve a sumar el
+     * servidor. No copia el total de {@code origen} ni su consecutivo — son de una
+     * compra distinta, que todavía no existe.
+     */
+    @Transactional
+    public CompraDto crearBorradorDesde(Compra origen, List<CompraItem> items, long usuarioId) {
+        List<PeticionesCompras.Compra.Linea> lineas = items.stream()
+                .map(item -> new PeticionesCompras.Compra.Linea(
+                        item.getVariante().getId(), item.getCantidad(), item.getCostoUnitario()))
+                .toList();
+
+        String notas = "Corrige la compra " + origen.getConsecutivo()
+                + (origen.getNotas() == null ? "" : ". " + origen.getNotas());
+
+        PeticionesCompras.Compra peticion = new PeticionesCompras.Compra(
+                origen.getProveedor().getId(), origen.getNumeroFactura(), notas, lineas);
+
+        return crearBorrador(peticion, usuarioId);
+    }
+
+    /**
      * Descartar un borrador. No revierte nada porque no hubo mercancía: es el acto de
      * decir "esta factura no iba". El consecutivo queda consumido a propósito — la
      * serie no tiene huecos, tiene una compra que se puede mirar y que dice por qué

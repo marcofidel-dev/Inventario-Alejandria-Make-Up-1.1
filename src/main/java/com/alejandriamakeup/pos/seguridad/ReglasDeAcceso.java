@@ -130,6 +130,9 @@ public class ReglasDeAcceso {
         requiere(HttpMethod.GET, "/api/v1/compras/{id}/previa-anulacion", Permiso.ANULAR_COMPRAS);
         requiere(HttpMethod.POST, "/api/v1/compras/{id}/anulacion", Permiso.ANULAR_COMPRAS);
 
+        // Corregir hace exactamente lo que hace anular, y ademas: mismo permiso.
+        requiere(HttpMethod.POST, "/api/v1/compras/{id}/correccion", Permiso.ANULAR_COMPRAS);
+
         // --- Configuración de la tienda --------------------------------------
         // Solo la DUENA. La EMPLEADA imprime recibos pero no redefine el NIT ni la
         // razón social que aparecen en todos los que se emitan después.

@@ -32,12 +32,21 @@ import { FormularioVariante } from './FormularioVariante.jsx'
  * un atajo. Un alta rapida a mitad de una captura de cuarenta lineas es la forma
  * segura de acabar con un catalogo lleno de registros a medias que nadie vuelve a
  * mirar.
+ *
+ * CON `compraInicial` esta misma pantalla EDITA un borrador que ya existe en vez de
+ * crear uno —es el paso que sigue a "Corregir" una compra recibida: el borrador de
+ * reemplazo ya quedo creado en el servidor con las mismas lineas, y aqui se abre para
+ * tocarlo antes de volver a recibir—. Guardar entonces manda PUT, no POST.
  */
-export function RegistrarCompra({ catalogo, compras, alCerrar, alRecibir }) {
-  const [proveedorId, setProveedorId] = useState('')
-  const [numeroFactura, setNumeroFactura] = useState('')
-  const [notas, setNotas] = useState('')
-  const [lineas, setLineas] = useState([lineaVacia()])
+export function RegistrarCompra({ catalogo, compras, compraInicial, alCerrar, alRecibir }) {
+  const [proveedorId, setProveedorId] = useState(
+    compraInicial ? String(compraInicial.proveedorId) : '',
+  )
+  const [numeroFactura, setNumeroFactura] = useState(compraInicial?.numeroFactura ?? '')
+  const [notas, setNotas] = useState(compraInicial?.notas ?? '')
+  const [lineas, setLineas] = useState(
+    compraInicial?.items.length ? compraInicial.items.map(lineaDesde) : [lineaVacia()],
+  )
   const [error, setError] = useState(null)
   const [guardando, setGuardando] = useState(false)
   const [guardada, setGuardada] = useState(null)
@@ -82,7 +91,7 @@ export function RegistrarCompra({ catalogo, compras, alCerrar, alRecibir }) {
     setError(null)
     try {
       // Sin total en el cuerpo: no hay campo donde mandarlo.
-      const respuesta = await apiCompras.crearBorrador({
+      const datos = {
         proveedorId: Number(proveedorId),
         numeroFactura: numeroFactura.trim() || null,
         notas: notas.trim() || null,
@@ -91,7 +100,10 @@ export function RegistrarCompra({ catalogo, compras, alCerrar, alRecibir }) {
           cantidad: Number(l.cantidad),
           costoUnitario: Number(l.costoUnitario),
         })),
-      })
+      }
+      const respuesta = compraInicial
+        ? await apiCompras.actualizarBorrador(compraInicial.id, datos)
+        : await apiCompras.crearBorrador(datos)
       setGuardada(respuesta)
       await compras.recargar()
     } catch (fallo) {
@@ -109,9 +121,17 @@ export function RegistrarCompra({ catalogo, compras, alCerrar, alRecibir }) {
   return (
     <>
       <div className="pantalla__cabecera">
-        <h1>Registrar una compra</h1>
+        <h1>{compraInicial ? `Editar el borrador ${compraInicial.consecutivo}` : 'Registrar una compra'}</h1>
         <Boton variante="plano" onClick={alCerrar}>Volver al listado</Boton>
       </div>
+
+      {compraInicial && (
+        <Aviso tipo="alerta" titulo="La compra original quedó anulada">
+          Este borrador tiene las mismas líneas que tenía. Revísalas, corrígelas si hace
+          falta, y recíbelo para que el inventario vuelva a decir la verdad — mientras tanto
+          el stock queda descuadrado.
+        </Aviso>
+      )}
 
       {error && error.codigo !== CODIGOS.validacionFallida && <AvisoDeError error={error} />}
 
@@ -296,4 +316,14 @@ let siguienteClave = 0
 function lineaVacia() {
   siguienteClave += 1
   return { clave: siguienteClave, varianteId: '', cantidad: '', costoUnitario: '' }
+}
+
+function lineaDesde(item) {
+  siguienteClave += 1
+  return {
+    clave: siguienteClave,
+    varianteId: String(item.varianteId),
+    cantidad: String(item.cantidad),
+    costoUnitario: String(item.costoUnitario),
+  }
 }

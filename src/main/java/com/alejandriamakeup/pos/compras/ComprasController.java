@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.alejandriamakeup.pos.compras.dto.CompraDto;
+import com.alejandriamakeup.pos.compras.dto.CorreccionCompraDto;
 import com.alejandriamakeup.pos.compras.dto.PeticionesCompras;
 import com.alejandriamakeup.pos.compras.dto.PreviaAnulacionDto;
 import com.alejandriamakeup.pos.compras.dto.PreviaRecepcionDto;
@@ -96,6 +97,19 @@ public class ComprasController {
                             @Valid @RequestBody PeticionesCompras.Baja peticion,
                             HttpSession sesion) {
         return servicioRecepcion.anular(id, peticion.motivo(),
+                SesionHttp.usuarioIdObligatorio(sesion));
+    }
+
+    /**
+     * Anula y, con las mismas líneas, abre un borrador nuevo para editar y volver a
+     * recibir. Usa la previa de anulación de siempre: sus números son los mismos que
+     * va a producir esto.
+     */
+    @PostMapping("/{id}/correccion")
+    public CorreccionCompraDto corregir(@PathVariable long id,
+                                        @Valid @RequestBody PeticionesCompras.Baja peticion,
+                                        HttpSession sesion) {
+        return servicioRecepcion.corregir(id, peticion.motivo(),
                 SesionHttp.usuarioIdObligatorio(sesion));
     }
 }
