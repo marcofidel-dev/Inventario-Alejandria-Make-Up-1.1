@@ -173,6 +173,8 @@
   --ancho-formulario: 26rem;
   --ancho-numpad:     15rem;
   --ancho-tarjeta:    12rem;
+  --tamano-logo-marca: 3rem;    /* la bolsa con la A, en el encabezado */
+  --tamano-logo:      12rem;    /* el logo entero, en las pantallas de entrada */
 
   /* -------------------------------------------------------------------
      RADIOS Y SOMBRAS

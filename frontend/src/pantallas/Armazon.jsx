@@ -1,6 +1,7 @@
 import { BarChart3, Boxes, LogOut, ShoppingCart, Truck, Wallet } from 'lucide-react'
 
 import { Boton } from '../componentes/Boton.jsx'
+import { Logo } from '../componentes/Logo.jsx'
 import { etiqueta } from '../etiquetas.js'
 import { PERMISOS, useSesion } from '../sesion/SesionContext.jsx'
 
@@ -127,7 +128,10 @@ export function Armazon({ vista, alCambiarVista, children }) {
   return (
     <div className="armazon">
       <header className="encabezado">
-        <span className="encabezado__marca">Alejandria MakeUp</span>
+        <span className="encabezado__marca">
+          <Logo variante="marca" />
+          Alejandria MakeUp
+        </span>
         <div className="encabezado__usuario">
           <span>{usuario.nombre}</span>
           <span className="insignia insignia--neutra">{etiqueta(usuario.rol)}</span>

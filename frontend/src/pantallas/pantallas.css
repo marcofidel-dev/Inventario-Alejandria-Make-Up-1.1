@@ -30,6 +30,12 @@
 
 .login__titulo { text-align: center; }
 
+/* El logo lleva su propio fondo negro: es un icono de aplicacion, no una imagen
+   suelta, asi que se redondea como uno. */
+.logo { display: block; flex: none; border-radius: var(--radio-lg); }
+.logo--completo { width: var(--tamano-logo); height: var(--tamano-logo); }
+.logo--marca { width: var(--tamano-logo-marca); height: var(--tamano-logo-marca); border-radius: var(--radio-sm); }
+
 .login__perfiles {
   display: flex;
   flex-wrap: wrap;
@@ -100,6 +106,9 @@
 }
 
 .encabezado__marca {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
   font-size: var(--texto-lg);
   font-weight: var(--peso-fuerte);
 }

@@ -5,6 +5,7 @@ import { CODIGOS } from '../api/cliente.js'
 import { autenticacion } from '../api/endpoints.js'
 import { Aviso, AvisoDeError } from '../componentes/Aviso.jsx'
 import { Boton } from '../componentes/Boton.jsx'
+import { Logo } from '../componentes/Logo.jsx'
 
 const LARGO_PIN = 4
 
@@ -141,7 +142,7 @@ export function Login({ alEntrar }) {
     return (
       <main className="login">
         <div className="login__caja">
-          <h1 className="login__titulo">Alejandria MakeUp</h1>
+          <h1 className="login__titulo"><Logo /></h1>
           <AvisoDeError error={errorDeCarga} alReintentar={cargarPerfiles} />
         </div>
       </main>
@@ -151,7 +152,7 @@ export function Login({ alEntrar }) {
   return (
     <main className="login">
       <div className="login__caja">
-        <h1 className="login__titulo">Alejandria MakeUp</h1>
+        <h1 className="login__titulo"><Logo /></h1>
 
         {nombre === null ? (
           <>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { AvisoDeError } from './componentes/Aviso.jsx'
+import { Logo } from './componentes/Logo.jsx'
 import { useCatalogo } from './catalogo/useCatalogo.js'
 import { useCompras } from './compras/useCompras.js'
 import { AjusteInventario } from './pantallas/AjusteInventario.jsx'
@@ -41,7 +42,7 @@ export default function App() {
     return (
       <main className="login">
         <div className="login__caja">
-          <h1 className="login__titulo">Alejandria MakeUp</h1>
+          <h1 className="login__titulo"><Logo /></h1>
           <AvisoDeError error={falloDeArranque} alReintentar={reintentarArranque} />
         </div>
       </main>

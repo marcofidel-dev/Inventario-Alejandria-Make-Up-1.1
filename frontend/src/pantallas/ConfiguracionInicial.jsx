@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { ShieldCheck } from 'lucide-react'
 
 import { autenticacion } from '../api/endpoints.js'
 import { AvisoDeError, Aviso } from '../componentes/Aviso.jsx'
 import { Boton } from '../componentes/Boton.jsx'
 import { Campo } from '../componentes/Campo.jsx'
+import { Logo } from '../componentes/Logo.jsx'
 
 const LARGO_PIN = 4
 
@@ -48,7 +48,7 @@ export function ConfiguracionInicial({ alConfigurar }) {
   return (
     <main className="login">
       <div className="login__caja">
-        <ShieldCheck size={32} aria-hidden="true" />
+        <Logo />
         <h1 className="login__titulo">Configuración inicial</h1>
         <p className="texto-secundario">
           No hay ningún usuario todavía. Crea la cuenta de administradora para empezar.
