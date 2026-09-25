@@ -6,6 +6,7 @@ import { Boton } from '../componentes/Boton.jsx'
 import { Campo } from '../componentes/Campo.jsx'
 import { filtrarCompras } from '../compras/useCompras.js'
 import { PERMISOS, useSesion } from '../sesion/SesionContext.jsx'
+import { etiqueta } from '../etiquetas.js'
 import { AnularCompra, DescartarCompra } from './BajasDeCompra.jsx'
 import { formatearPesos } from './Catalogo.jsx'
 import { RecibirCompra } from './RecibirCompra.jsx'
@@ -105,7 +106,7 @@ export function Compras({ catalogo, compras }) {
                 <select {...props} value={estado} onChange={(e) => setEstado(e.target.value)}>
                   <option value="">Todos</option>
                   {ESTADOS.map((valor) => (
-                    <option key={valor} value={valor}>{valor}</option>
+                    <option key={valor} value={valor}>{etiqueta(valor)}</option>
                   ))}
                 </select>
               )}
@@ -154,7 +155,7 @@ export function Compras({ catalogo, compras }) {
                       <td className="numero monto">{formatearPesos(compra.total)}</td>
                       <td>
                         <span className={`insignia ${INSIGNIA[compra.estado]}`}>
-                          {compra.estado}
+                          {etiqueta(compra.estado)}
                         </span>
                       </td>
                       <td className="fila__acciones">

@@ -158,11 +158,13 @@ describe('la caja con la sesión abierta', () => {
     expect(todoLoVisible()).not.toContain('30.000')
   })
 
-  it('nombra los tipos por lo que se hace, con el nombre técnico debajo', async () => {
+  it('nombra los tipos por lo que se hace, con el nombre corto debajo', async () => {
     montar({ movimientos: [movimientoDePrueba({ tipo: 'GASTO', concepto: 'Domicilio' })] })
 
     expect(await screen.findByText('Pagar algo con plata de la caja')).toBeInTheDocument()
-    expect(screen.getByText('GASTO')).toBeInTheDocument()
+    // El nombre corto, no el identificador: "Gasto" y nunca "GASTO".
+    expect(screen.getByText('Gasto')).toBeInTheDocument()
+    expect(screen.queryByText('GASTO')).not.toBeInTheDocument()
   })
 })
 

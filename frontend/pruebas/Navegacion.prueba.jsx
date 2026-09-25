@@ -15,7 +15,7 @@ const { Armazon, pestanaInicialDe, seccionesVisibles } = await import('../src/pa
 function montar(rol, permisos) {
   contexto.sesion = sesionDe(rol, permisos)
   render(
-    <Armazon vista={{ seccion: 'catalogo', pestana: 'productos' }} alCambiarVista={() => {}}>
+    <Armazon vista={{ seccion: 'inventario', pestana: 'productos' }} alCambiarVista={() => {}}>
       <p>contenido</p>
     </Armazon>,
   )
@@ -30,9 +30,10 @@ describe('Navegación', () => {
 
     // El orden importa: Vender primero porque va a ser casi todo el uso, y
     // Metricas al final. Carga inicial NO esta aqui: es una pestaña de
-    // Inventario, porque se usa unos dias y despues nunca.
+    // Inventario, porque se usa unos dias y despues nunca. Y Catalogo tampoco:
+    // dejo de ser una seccion cuando se fusiono con Inventario, que hacia lo mismo.
     expect(itemsDeNavegacion().map((t) => t.replace('pronto', ''))).toEqual([
-      'Vender', 'Caja', 'Catálogo', 'Compras', 'Inventario', 'Métricas',
+      'Vender', 'Caja', 'Inventario', 'Compras', 'Métricas',
     ])
   })
 
@@ -54,28 +55,41 @@ describe('Navegación', () => {
     expect(within(navegacion()).queryByText(/Métricas/)).not.toBeInTheDocument()
   })
 
-  it('la EMPLEADA sí ve lo suyo: vender, caja, catálogo e inventario', () => {
+  it('la EMPLEADA sí ve lo suyo: vender, caja e inventario', () => {
     montar('EMPLEADA', PERMISOS_EMPLEADA)
 
     expect(itemsDeNavegacion().map((t) => t.replace('pronto', ''))).toEqual([
-      'Vender', 'Caja', 'Catálogo', 'Inventario',
+      'Vender', 'Caja', 'Inventario',
     ])
   })
 
   /**
    * Una seccion se dibuja si al menos una pestaña sobrevive al filtro. A la
-   * EMPLEADA le queda Inventario con Existencias sola, sin Ajustes ni Carga
-   * inicial.
+   * EMPLEADA le queda Inventario con Productos sola, sin Ajustes, sin Carga
+   * inicial y sin Marcas.
    */
   it('las pestañas se filtran una por una, no la sección entera', () => {
     const dela = seccionesVisibles((permiso) => PERMISOS_EMPLEADA.includes(permiso))
     const inventario = dela.find((s) => s.id === 'inventario')
 
-    expect(inventario.pestanas.map((p) => p.id)).toEqual(['existencias'])
+    expect(inventario.pestanas.map((p) => p.id)).toEqual(['productos'])
 
     const deLaDuena = seccionesVisibles((permiso) => PERMISOS_DUENA.includes(permiso))
     expect(deLaDuena.find((s) => s.id === 'inventario').pestanas.map((p) => p.id))
-      .toEqual(['existencias', 'ajustes', 'carga-inicial'])
+      .toEqual(['productos', 'ajustes', 'carga-inicial', 'marcas'])
+  })
+
+  /**
+   * LA FUSION, AFIRMADA COMO AUSENCIA. Catalogo y Existencias eran dos puertas al
+   * mismo sitio: la lista de productos con su stock. Que no vuelvan es la mitad del
+   * cambio, y es la mitad que nadie nota al mirar la pantalla nueva.
+   */
+  it('ya no existen ni la sección Catálogo ni la pestaña Existencias', () => {
+    const todas = seccionesVisibles((permiso) => PERMISOS_DUENA.includes(permiso))
+
+    expect(todas.find((s) => s.id === 'catalogo')).toBeUndefined()
+    expect(todas.flatMap((s) => s.pestanas ?? []).map((p) => p.id))
+      .not.toContain('existencias')
   })
 
   /** Lo que no existe se declara, pero no se puede pulsar. */
@@ -95,9 +109,7 @@ describe('Navegación', () => {
   it('una sección abre en su primera pestaña que de verdad existe', () => {
     const secciones = seccionesVisibles((permiso) => PERMISOS_DUENA.includes(permiso))
 
-    // Existencias va primera pero todavia no existe, asi que abre en Ajustes.
-    expect(pestanaInicialDe(secciones.find((s) => s.id === 'inventario'))).toBe('ajustes')
+    expect(pestanaInicialDe(secciones.find((s) => s.id === 'inventario'))).toBe('productos')
     expect(pestanaInicialDe(secciones.find((s) => s.id === 'compras'))).toBe('compras')
-    expect(pestanaInicialDe(secciones.find((s) => s.id === 'catalogo'))).toBe('productos')
   })
 })

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Ban } from 'lucide-react'
+import { Ban, FileText } from 'lucide-react'
 
 import { ventas as apiVentas } from '../api/endpoints.js'
 import { Aviso, AvisoDeError } from '../componentes/Aviso.jsx'
 import { Boton } from '../componentes/Boton.jsx'
 import { Campo } from '../componentes/Campo.jsx'
 import { Modal } from '../componentes/Modal.jsx'
+import { etiqueta } from '../etiquetas.js'
+import { useRecibo } from '../ventas/useRecibo.js'
 import { PERMISOS, useSesion } from '../sesion/SesionContext.jsx'
 import { formatearPesos } from './Catalogo.jsx'
 
@@ -60,7 +62,7 @@ export function Ventas() {
       {cargando
         ? <p className="texto-secundario">Buscando…</p>
         : <Tabla filas={filas} puedeAnular={puede(PERMISOS.anularVentas)}
-                 alAnular={setAnulando} />}
+                 alAnular={setAnulando} alCambiarRecibo={recargar} />}
 
       {anulando && (
         <AnularVenta
@@ -73,7 +75,9 @@ export function Ventas() {
   )
 }
 
-function Tabla({ filas, puedeAnular, alAnular }) {
+function Tabla({ filas, puedeAnular, alAnular, alCambiarRecibo }) {
+  const recibo = useRecibo()
+
   if (filas.length === 0) {
     return (
       <div className="estado-vacio">
@@ -83,53 +87,77 @@ function Tabla({ filas, puedeAnular, alAnular }) {
   }
 
   return (
-    <div className="tabla-envoltura">
-      <table className="tabla">
-        <thead>
-          <tr>
-            <th>N.º</th>
-            <th>Hora</th>
-            <th className="numero">Total</th>
-            <th>Cómo pagó</th>
-            <th>Estado</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {filas.map((venta) => (
-            <tr key={venta.id} className={venta.estado === 'ANULADA' ? 'inactiva' : undefined}>
-              <td>{venta.consecutivo}</td>
-              <td>{soloHora(venta.fecha)}</td>
-              <td className="numero monto">{formatearPesos(venta.total)}</td>
-              <td>{COMO_SE_DICE[venta.metodoPago] ?? venta.metodoPago}</td>
-              <td>
-                {venta.estado === 'ANULADA'
-                  ? (
-                    <>
-                      <span className="insignia insignia--neutra">anulada</span>
-                      {venta.motivoAnulacion && (
-                        <div className="texto-tenue">{venta.motivoAnulacion}</div>
-                      )}
-                    </>
-                  )
-                  : <span className="texto-secundario">completada</span>}
-              </td>
-              <td className="fila__acciones">
-                {/* Anular es destructivo pero no es lo que se viene a hacer aqui. En
-                    rojo y en cada fila, veinte botones de anular gritan mas que los
-                    datos y ademas se pulsan por accidente. El peso va en la
-                    confirmacion, que es donde de verdad se decide. */}
-                {puedeAnular && venta.estado === 'COMPLETADA' && (
-                  <Boton variante="plano" icono={Ban} onClick={() => alAnular(venta)}>
-                    Anular
-                  </Boton>
-                )}
-              </td>
+    <>
+      {/* El fallo del recibo va arriba de la tabla y en tono de alerta: la venta
+          existe y no cambia; lo que no se pudo es sacar un papel. */}
+      {recibo.error && (
+        <Aviso tipo="alerta" titulo="No se pudo abrir el recibo">{recibo.error}</Aviso>
+      )}
+
+      <div className="tabla-envoltura">
+        <table className="tabla">
+          <thead>
+            <tr>
+              <th>N.º</th>
+              <th>Hora</th>
+              <th className="numero">Total</th>
+              <th>Cómo pagó</th>
+              <th>Estado</th>
+              <th />
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {filas.map((venta) => (
+              <tr key={venta.id} className={venta.estado === 'ANULADA' ? 'inactiva' : undefined}>
+                <td>{venta.consecutivo}</td>
+                <td>{soloHora(venta.fecha)}</td>
+                <td className="numero monto">{formatearPesos(venta.total)}</td>
+                <td>{etiqueta(venta.metodoPago)}</td>
+                <td>
+                  {venta.estado === 'ANULADA'
+                    ? (
+                      <>
+                        <span className="insignia insignia--neutra">anulada</span>
+                        {venta.motivoAnulacion && (
+                          <div className="texto-tenue">{venta.motivoAnulacion}</div>
+                        )}
+                      </>
+                    )
+                    : <span className="texto-secundario">completada</span>}
+                </td>
+                <td className="fila__acciones">
+                  {/* VER O GENERAR, segun la fila, y la que decide es `rutaRecibo`: el
+                      resumen la trae justo para esto. Un solo boton "Recibo" que a veces
+                      abre y a veces genera escondería que en un caso hay un archivo y en
+                      el otro se esta creando uno. */}
+                  <Boton
+                    variante="plano"
+                    icono={FileText}
+                    ocupado={recibo.ocupada === venta.id}
+                    textoOcupado="Abriendo…"
+                    onClick={() => (venta.rutaRecibo
+                      ? recibo.abrir(venta.id)
+                      : recibo.generar(venta.id).then((v) => v && alCambiarRecibo()))}
+                  >
+                    {venta.rutaRecibo ? 'Ver recibo' : 'Generar recibo'}
+                  </Boton>
+
+                  {/* Anular es destructivo pero no es lo que se viene a hacer aqui. En
+                      rojo y en cada fila, veinte botones de anular gritan mas que los
+                      datos y ademas se pulsan por accidente. El peso va en la
+                      confirmacion, que es donde de verdad se decide. */}
+                  {puedeAnular && venta.estado === 'COMPLETADA' && (
+                    <Boton variante="plano" icono={Ban} onClick={() => alAnular(venta)}>
+                      Anular
+                    </Boton>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   )
 }
 
@@ -189,15 +217,6 @@ function AnularVenta({ venta, alCerrar, alAnular }) {
       </div>
     </Modal>
   )
-}
-
-/** Los metodos, dichos como se dicen en el mostrador. */
-const COMO_SE_DICE = {
-  EFECTIVO: 'Efectivo',
-  TARJETA: 'Tarjeta',
-  NEQUI: 'Nequi',
-  DAVIPLATA: 'Daviplata',
-  TRANSFERENCIA: 'Transferencia',
 }
 
 /** Hoy en local, en el formato que espera <input type="date">. */

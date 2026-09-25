@@ -132,7 +132,7 @@ export function RegistrarCompra({ catalogo, compras, alCerrar, alRecibir }) {
                onChange={(e) => setNumeroFactura(e.target.value)} />
       </div>
 
-      <div className="tabla-envoltura" ref={contenedor}>
+      <div className="tabla-envoltura tabla-envoltura--captura" ref={contenedor}>
         <table className="tabla carga__tabla">
           <thead>
             <tr>

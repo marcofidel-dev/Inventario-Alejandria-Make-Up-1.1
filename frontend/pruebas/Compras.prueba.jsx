@@ -27,6 +27,8 @@ async function montar({ compras = comprasDePrueba(), proveedores = proveedoresDe
   const espia = fetchFalso({
     '/api/v1/catalogo': { cuerpo: catalogoDePrueba() },
     '/api/v1/proveedores': { cuerpo: proveedores },
+    '/api/v1/catalogo/productos': { estado: 201, cuerpo: { id: 500, nombre: 'Rubor compacto', marcaId: 1, categoriaId: 10, descripcion: null, activo: true } },
+    '/api/v1/catalogo/variantes': { estado: 201, cuerpo: { id: 5000 } },
     // La misma ruta sirve al listado y a la creacion: se distinguen por el metodo.
     '/api/v1/compras': (ruta, opciones) => (
       opciones?.method === 'POST' ? alCrearCompra(ruta, opciones) : { cuerpo: compras }
@@ -58,7 +60,7 @@ describe('Compras', () => {
 
     // El fixture trae la anulada como la mas reciente y el borrador en el medio.
     expect(filas()[0]).toHaveTextContent('C-000901')
-    expect(filas()[0]).toHaveTextContent('BORRADOR')
+    expect(filas()[0]).toHaveTextContent('Borrador')
   })
 
   it('cuenta los borradores pendientes a la vista', async () => {
@@ -198,6 +200,64 @@ describe('Compras', () => {
       await usuario.type(screen.getByLabelText('Variante de la línea 1'), 'coral')
 
       expect(await screen.findByRole('option', { name: /Coral pendiente/ })).toBeInTheDocument()
+    })
+
+    /**
+     * EL ALTA DE PRODUCTO, DE PUNTA A PUNTA SIN TOCAR EL RATON.
+     *
+     * Es el formulario donde se van a pasar horas: una factura de proveedor trae
+     * cuarenta renglones y varios traen productos que todavia no estan en el
+     * catalogo. Cada vez que la mano tiene que soltar el teclado para buscar el
+     * puntero se pierden segundos, y cuarenta veces son minutos por factura.
+     *
+     * Se conduce entero con Tab y Enter a proposito: `userEvent.keyboard` mueve el
+     * foco por el DOM igual que el navegador, asi que si el orden de los campos o la
+     * trampa de foco del modal se rompieran, esta prueba se cae. Ningun `click`.
+     */
+    it('crear producto y variante durante la compra se hace solo con el teclado', async () => {
+      const usuario = userEvent.setup()
+      await montar()
+
+      await usuario.click(screen.getByRole('button', { name: /Registrar una compra/ }))
+      await screen.findByRole('heading', { name: 'Registrar una compra' })
+
+      // Desde aqui, ni un clic mas.
+      screen.getByRole('button', { name: /El producto no está en el catálogo/ }).focus()
+      await usuario.keyboard('{Enter}')
+
+      // El modal se abre con el foco YA puesto en el primer campo: sin eso, la
+      // primera tecla que se escriba no va a ninguna parte.
+      const nombre = await screen.findByLabelText('Nombre del producto')
+      expect(nombre).toHaveFocus()
+
+      await usuario.keyboard('Rubor compacto')
+
+      // El orden de tabulacion es el orden de lectura de la factura.
+      await usuario.tab()
+      expect(screen.getByLabelText('Marca')).toHaveFocus()
+      await usuario.selectOptions(screen.getByLabelText('Marca'), '1')
+
+      await usuario.tab()
+      expect(screen.getByRole('button', { name: /Nueva marca/ })).toHaveFocus()
+      await usuario.tab()
+      expect(screen.getByLabelText('Categoría')).toHaveFocus()
+      await usuario.selectOptions(screen.getByLabelText('Categoría'), '10')
+
+      await usuario.tab()
+      expect(screen.getByRole('button', { name: /Nueva categoría/ })).toHaveFocus()
+      await usuario.tab()
+      expect(screen.getByLabelText('Descripción (opcional)')).toHaveFocus()
+
+      await usuario.tab()
+      expect(screen.getByRole('button', { name: 'Cancelar' })).toHaveFocus()
+      await usuario.tab()
+      expect(screen.getByRole('button', { name: 'Crear producto' })).toHaveFocus()
+      await usuario.keyboard('{Enter}')
+
+      // Y se encadena solo al segundo paso: un producto sin variante no se puede
+      // comprar, asi que la variante no se ofrece, se abre.
+      const tono = await screen.findByLabelText('Tono')
+      expect(tono).toHaveFocus()
     })
 
     /** Enter en el costo agrega la linea siguiente: la factura se copia sin raton. */

@@ -9,7 +9,11 @@ import { FormularioVariante } from './FormularioVariante.jsx'
 import { PERMISOS, useSesion } from '../sesion/SesionContext.jsx'
 
 /**
- * El catalogo: la pantalla que la EMPLEADA mira todo el dia.
+ * Inventario > Productos: la pantalla que la EMPLEADA mira todo el dia.
+ *
+ * Es la vista principal de Inventario, y antes vivia en una seccion aparte llamada
+ * Catalogo. Se fusionaron porque hacian lo mismo: lo que iba a mostrar la pestaña
+ * "Existencias" —buscar, ver stock— es exactamente esto.
  *
  * DE AQUI NO NACE NINGUN PRODUCTO. Los productos nacen donde entra mercancia fisica
  * con un costo —registrar una compra y la carga inicial— y esta pantalla administra
@@ -55,7 +59,7 @@ export function Catalogo({ catalogo, alIrA }) {
   return (
     <>
       <div className="pantalla__cabecera">
-        <h1>Catálogo</h1>
+        <h1>Productos</h1>
       </div>
 
       {catalogo.estaVacio ? (
@@ -200,7 +204,7 @@ function PrimerosPasos({ alIrA }) {
       <p>
         Los productos aparecen aquí cuando entra mercancía: al recibir una compra a un
         proveedor, o al hacer la carga inicial del inventario que ya está en la tienda.
-        Desde el catálogo se administran los precios y las existencias, no se crean.
+        Desde aquí se administran los precios y las existencias, no se crean.
       </p>
       <div className="estado-vacio__acciones">
         {puede(PERMISOS.registrarCompras) && (

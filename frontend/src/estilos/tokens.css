@@ -166,6 +166,10 @@
      ------------------------------------------------------------------- */
   --ancho-navegacion: 14rem;
   --ancho-modal:      34rem;
+  /* El modal de captura: alta de producto y de variante durante una compra. Es
+     donde se van a pasar horas copiando una factura, asi que usa el ancho que hay
+     y reparte los campos en dos columnas en vez de obligar a desplazarse. */
+  --ancho-modal-amplio: 56rem;
   --ancho-formulario: 26rem;
   --ancho-numpad:     15rem;
 

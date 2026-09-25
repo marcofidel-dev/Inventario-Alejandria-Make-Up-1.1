@@ -30,6 +30,13 @@ export function FormularioProducto({ catalogo, producto, alCerrar, alGuardar }) 
   const editando = Boolean(producto)
   const puedeGuardar = nombre.trim() && marcaId && categoriaId && !guardando
 
+  // Una marca desactivada no se ofrece para un producto nuevo —desactivarla
+  // significa exactamente eso—, pero si el producto que se edita ya la tiene sigue
+  // en la lista: hacer desaparecer la seleccion actual convertiria un "guardar sin
+  // tocar nada" en un cambio de marca silencioso.
+  const marcas = catalogo.marcas.filter((m) => m.activo || String(m.id) === marcaId)
+  const categorias = catalogo.categorias.filter((c) => c.activo || String(c.id) === categoriaId)
+
   async function guardar() {
     if (!puedeGuardar) return
     setGuardando(true)
@@ -63,6 +70,7 @@ export function FormularioProducto({ catalogo, producto, alCerrar, alGuardar }) 
     <Modal
       titulo={editando ? 'Editar producto' : 'Nuevo producto'}
       alCerrar={alCerrar}
+      amplio
       acciones={
         <>
           <Boton variante="plano" onClick={alCerrar} disabled={guardando}>Cancelar</Boton>
@@ -74,6 +82,9 @@ export function FormularioProducto({ catalogo, producto, alCerrar, alGuardar }) 
       }
     >
       <div className="formulario">
+        {/* El orden de los campos es el orden del tabulador, y en el modal amplio
+            tambien el de la rejilla: nombre, marca, categoria, descripcion. Es el
+            orden en que se leen de la factura. */}
         <Campo
           etiqueta="Nombre del producto"
           value={nombre}
@@ -84,7 +95,7 @@ export function FormularioProducto({ catalogo, producto, alCerrar, alGuardar }) 
 
         <SelectorConAlta
           etiqueta="Marca"
-          opciones={catalogo.marcas}
+          opciones={marcas}
           valor={marcaId}
           alCambiar={setMarcaId}
           alCrear={async (nuevo) => {
@@ -98,7 +109,7 @@ export function FormularioProducto({ catalogo, producto, alCerrar, alGuardar }) 
 
         <SelectorConAlta
           etiqueta="Categoría"
-          opciones={catalogo.categorias}
+          opciones={categorias}
           valor={categoriaId}
           alCambiar={setCategoriaId}
           alCrear={async (nuevo) => {

@@ -6,6 +6,7 @@ import { Aviso, AvisoDeError } from '../componentes/Aviso.jsx'
 import { Boton } from '../componentes/Boton.jsx'
 import { Campo } from '../componentes/Campo.jsx'
 import { Modal } from '../componentes/Modal.jsx'
+import { etiqueta } from '../etiquetas.js'
 import { CerrarCaja, describirDiferencia, sinExplicar } from './CerrarCaja.jsx'
 import { formatearPesos } from './Catalogo.jsx'
 
@@ -18,10 +19,11 @@ import { formatearPesos } from './Catalogo.jsx'
  * que si se muestra es QUE movimientos hubo —tipo, concepto, hora, quien— y cuantos
  * son, que es lo que sirve para verificar sin revelar el efectivo esperado.
  *
- * LOS TIPOS SE NOMBRAN POR LO QUE SE HACE. "RETIRO", "GASTO" e "INGRESO" no
+ * LOS TIPOS SE NOMBRAN POR LO QUE SE HACE. "Retiro", "Gasto" e "Ingreso" no
  * significan nada para quien no lleva libros, y quien opera esta caja no lleva
- * libros. El nombre tecnico va debajo, en pequeno, porque es el que va a aparecer en
- * cualquier reporte y en algun momento hay que poder relacionarlos.
+ * libros. El nombre corto va debajo, en pequeno, porque es el que va a aparecer en
+ * cualquier reporte y en algun momento hay que poder relacionarlos — pero traducido,
+ * nunca el identificador crudo: VENTA_EFECTIVO no es una palabra.
  */
 export function Caja() {
   const [sesion, setSesion] = useState(null)
@@ -294,8 +296,13 @@ function ListaDeMovimientos({ movimientos }) {
             <tr key={movimiento.id}>
               <td>{soloHora(movimiento.fecha)}</td>
               <td>
-                {POR_ID.get(movimiento.tipo)?.texto ?? movimiento.tipo}
-                <div className="texto-tenue">{movimiento.tipo}</div>
+                {POR_ID.get(movimiento.tipo)?.texto ?? etiqueta(movimiento.tipo)}
+                {/* El nombre corto solo cuando agrega algo: para VENTA_EFECTIVO, que
+                    no lo escribe una persona sino el cobro, la frase larga no existe
+                    y repetir "Venta en efectivo" debajo de si misma no dice nada. */}
+                {POR_ID.has(movimiento.tipo) && (
+                  <div className="texto-tenue">{etiqueta(movimiento.tipo)}</div>
+                )}
               </td>
               <td>{movimiento.concepto}</td>
               <td>{movimiento.usuario}</td>

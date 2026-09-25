@@ -35,6 +35,9 @@ const VENTA = src('pantallas', 'Venta.jsx')
 const LISTADO_VENTAS = src('pantallas', 'Ventas.jsx')
 const CERRAR_CAJA = src('pantallas', 'CerrarCaja.jsx')
 const CONTADOR = src('componentes', 'ContadorDeDenominaciones.jsx')
+const MODAL = src('componentes', 'Modal.jsx')
+const MARCAS = src('pantallas', 'MarcasYCategorias.jsx')
+const BUSCADOR = src('componentes', 'BuscadorDeVariante.jsx')
 
 function sustituir(de, a) {
   return (contenido) => {
@@ -385,6 +388,90 @@ const CASOS = [
     romper: sustituir('               disabled={!motivo.trim()}>', '>'),
   },
 
+  {
+    regla: 'ningún identificador de código llega a la pantalla: el rol se traduce',
+    archivo: ARMAZON,
+    pruebas: 'pruebas/Etiquetas.prueba.jsx',
+    debeCaer: 'el encabezado dice el rol con palabras, no DUENA',
+    romper: sustituir('{etiqueta(usuario.rol)}', '{usuario.rol}'),
+  },
+  {
+    regla: 'tampoco en la caja, donde VENTA_EFECTIVO lo escribe el cobro y no una persona',
+    archivo: CAJA,
+    pruebas: 'pruebas/Etiquetas.prueba.jsx',
+    debeCaer: 'los movimientos de caja no muestran VENTA_EFECTIVO',
+    romper: sustituir(
+      '{POR_ID.get(movimiento.tipo)?.texto ?? etiqueta(movimiento.tipo)}',
+      '{POR_ID.get(movimiento.tipo)?.texto ?? movimiento.tipo}'),
+  },
+  {
+    regla: 'el modal respeta el campo con autoFocus en vez de saltar siempre al primero',
+    archivo: MODAL,
+    pruebas: 'pruebas/Compras.prueba.jsx',
+    debeCaer: 'crear producto y variante durante la compra se hace solo con el teclado',
+    romper: sustituir(
+      'if (!caja.current?.contains(document.activeElement)) {',
+      'if (true) {'),
+  },
+  {
+    regla: 'los productos se cuentan por marca, no todos contra todas',
+    archivo: MARCAS,
+    pruebas: 'pruebas/MarcasYCategorias.prueba.jsx',
+    debeCaer: 'cuenta los productos de cada una y marca las que no tienen ninguno',
+    romper: sustituir(
+      'porMarca.set(producto.marcaId, (porMarca.get(producto.marcaId) ?? 0) + 1)',
+      'for (const marca of catalogo.marcas) porMarca.set(marca.id, (porMarca.get(marca.id) ?? 0) + 1)'),
+  },
+  {
+    regla: 'el recibo se abre en el visor del sistema, no en una ventana del navegador',
+    archivo: LISTADO_VENTAS,
+    pruebas: 'pruebas/Ventas.prueba.jsx',
+    debeCaer: 'ver el recibo se lo pide al backend, no abre una ventana del navegador',
+    // La regresion realista: "simplificarlo" a abrir la URL del PDF. En modo app eso
+    // deja una ventana de navegador suelta encima del mostrador.
+    romper: sustituir('? recibo.abrir(venta.id)',
+      "? window.open(`/api/v1/ventas/${venta.id}/recibo`)"),
+  },
+  {
+    regla: 'la fila ofrece ver o generar segun tenga o no archivo',
+    archivo: LISTADO_VENTAS,
+    pruebas: 'pruebas/Ventas.prueba.jsx',
+    debeCaer: 'ofrece ver el recibo cuando hay archivo y generarlo cuando no',
+    romper: sustituir("{venta.rutaRecibo ? 'Ver recibo' : 'Generar recibo'}", "{'Ver recibo'}"),
+  },
+  {
+    regla: 'la descripcion de la variante es la del backend, no una rearmada en el front',
+    archivo: BUSCADOR,
+    pruebas: 'pruebas/BuscadorDeVariante.prueba.jsx',
+    debeCaer: 'muestra la descripción del backend tal cual, sin rearmarla',
+    romper: sustituir("  return fila.descripcion ?? ''",
+      "  return [fila.marcaNombre, fila.productoNombre, fila.tono].filter(Boolean).join(' · ')"),
+  },
+  {
+    regla: 'el desplegable es mas ancho que la celda, para que una opcion sea una linea',
+    archivo: BUSCADOR,
+    pruebas: 'pruebas/BuscadorDeVariante.prueba.jsx',
+    debeCaer: 'es al menos tan ancha como su min-width, aunque el campo sea angosto',
+    // La regresion realista: "simplificar" el ancho al del campo, que es lo que
+    // parece obvio y lo que parte cada opcion en dos lineas.
+    romper: sustituir('const ancho = Math.max(campo.width, minimo)',
+      'const ancho = campo.width'),
+  },
+  {
+    regla: 'la altura del desplegable sale del espacio libre, no de una cuenta de filas',
+    archivo: BUSCADOR,
+    pruebas: 'pruebas/BuscadorDeVariante.prueba.jsx',
+    debeCaer: 'la altura máxima es el espacio libre, no una cuenta de filas',
+    romper: sustituir('        maxHeight: Math.max(haciaArriba ? espacioArriba : espacioAbajo, 0),'
+      + String.fromCharCode(10), ''),
+  },
+  {
+    regla: 'el desplegable se ancla en coordenadas de ventana, fuera de lo que lo recorta',
+    archivo: BUSCADOR,
+    pruebas: 'pruebas/BuscadorDeVariante.prueba.jsx',
+    debeCaer: 'se ancla al campo con coordenadas propias, no al contenedor',
+    romper: sustituir('style={ancla ?? undefined}', ''),
+  },
   {
     regla: 'el total contado suma denominación por cantidad, que es como se cuenta la plata',
     archivo: CONTADOR,

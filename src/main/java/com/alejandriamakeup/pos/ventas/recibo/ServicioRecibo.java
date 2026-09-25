@@ -117,6 +117,30 @@ public class ServicioRecibo {
         }
     }
 
+    /**
+     * La ruta absoluta del PDF ya generado, para abrirlo con el visor del sistema.
+     *
+     * <p>Devuelve la ruta y no abre nada: abrir es lanzar un proceso, y este método es
+     * transaccional. Con el pool de una conexión, esperar a que arranque un programa de
+     * escritorio con la conexión tomada es exactamente lo que no se puede hacer. Quien
+     * llama abre después, fuera de la transacción.
+     *
+     * <p>Comprueba el archivo igual que {@link #pdf(long)} y por lo mismo: la columna
+     * puede tener texto y el archivo no estar, y decírselo a {@code Desktop} produce un
+     * error del sistema operativo en vez de un mensaje que lleve a regenerarlo.
+     */
+    public Path archivo(long ventaId) {
+        Venta venta = buscar(ventaId);
+        Path archivo = archivoDe(venta);
+
+        if (archivo == null || !Files.isRegularFile(archivo)) {
+            throw ErrorDeAplicacion.noEncontrado("La venta " + venta.getConsecutivo()
+                    + " no tiene recibo generado. Se puede volver a generar desde el "
+                    + "listado de ventas.");
+        }
+        return archivo;
+    }
+
     /** El nombre con el que se descarga o se abre: el consecutivo, no el id. */
     public String nombreDeArchivo(long ventaId) {
         return buscar(ventaId).getConsecutivo() + ".pdf";

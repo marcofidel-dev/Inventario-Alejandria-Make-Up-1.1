@@ -155,6 +155,7 @@ public class ReglasDeAcceso {
         // buscar a nadie. Configurar la tienda sigue siendo otra cosa, arriba.
         requiere(HttpMethod.GET, "/api/v1/ventas/{id}/recibo", Permiso.REGISTRAR_VENTAS);
         requiere(HttpMethod.POST, "/api/v1/ventas/{id}/recibo", Permiso.REGISTRAR_VENTAS);
+        requiere(HttpMethod.POST, "/api/v1/ventas/{id}/recibo/apertura", Permiso.REGISTRAR_VENTAS);
 
         // --- Metricas --------------------------------------------------------
         // El modulo entero es de la DUENA: son costos y margenes de principio a fin.

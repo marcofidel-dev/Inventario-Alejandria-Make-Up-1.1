@@ -92,6 +92,19 @@ export const ventas = {
   cobrar: (datos) => api.postConEstado('/api/v1/ventas', datos),
 
   anular: (id, motivo) => api.post(`/api/v1/ventas/${id}/anulacion`, { motivo }),
+
+  /**
+   * Abre el recibo en el VISOR DE PDF DEL SISTEMA, no en el navegador.
+   *
+   * La aplicacion vive en una ventana en modo app, sin barra de direcciones: pedir el
+   * PDF por HTTP abriria una ventana de navegador suelta encima de la pantalla de
+   * cobro, con la clienta enfrente y alguien buscando como cerrarla. Por eso lo abre
+   * el backend, que es el unico que puede hablar con el escritorio.
+   */
+  abrirRecibo: (id) => api.post(`/api/v1/ventas/${id}/recibo/apertura`),
+
+  /** Para las ventas que quedaron sin comprobante. Si ya lo tiene, no reescribe nada. */
+  generarRecibo: (id) => api.post(`/api/v1/ventas/${id}/recibo`),
 }
 
 /**

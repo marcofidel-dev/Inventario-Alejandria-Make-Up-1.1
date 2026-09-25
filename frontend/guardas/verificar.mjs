@@ -305,11 +305,50 @@ for (const [, peso] of cssTokens.matchAll(/--peso-[a-z]+:\s*(\d{3});/g)) {
 }
 
 // =====================================================================
+// 8. Ningun archivo con CRLF
+//
+// ESTA GUARDA EXISTE PORQUE OTRA GUARDA FALLO EN SILENCIO. `pruebas/romper.mjs` y
+// `guardas/romper.mjs` localizan el codigo que van a mutar con cadenas que llevan un
+// salto de linea escrito como escape. Un archivo guardado con CRLF —lo hace
+// cualquier editor mal configurado, y lo hace Python al escribir en modo texto sobre
+// Windows— rompe todo anclaje de dos o mas lineas: el caso reporta "el caso esperaba
+// encontrar … y no esta", que se lee como una prueba que dejo de cubrir su regla
+// cuando el codigo esta intacto.
+//
+// Y no se ve: el archivo se abre igual, las pruebas pasan igual, y git diff ni lo
+// menciona porque el indice normaliza. Una guarda que deja de cubrir sin avisar es
+// peor que no tenerla, asi que la conversion se detiene aqui y no cuando alguien se
+// pregunta por que una regla dejo de estar protegida.
+//
+// .gitattributes declara `* text=auto eol=lf` para que git lo mantenga; esto
+// comprueba el disco, que es lo que leen los dos scripts de mutacion.
+// =====================================================================
+
+/** El retorno de carro, sin escribirlo como escape: ver la nota de abajo. */
+const RETORNO_DE_CARRO = String.fromCharCode(13)
+
+const CON_FINALES = [
+  ...archivos(FUENTE, ['.jsx', '.js', '.css']),
+  ...archivos(join(RAIZ, 'guardas'), ['.mjs']),
+  ...archivos(join(RAIZ, 'pruebas'), ['.jsx', '.js', '.mjs']),
+]
+
+for (const ruta of CON_FINALES) {
+  // El CR se compara por codigo y no como "\r\n" a proposito: este archivo es
+  // justo el que no puede permitirse que una herramienta le toque los escapes.
+  if (textoDe(ruta).includes(RETORNO_DE_CARRO)) {
+    fallar('finales-de-linea', `${corto(ruta)} tiene CRLF. El arbol es LF, y con CRLF los `
+      + 'anclajes multilinea de romper.mjs dejan de encontrarse: las guardas de mutacion '
+      + 'reportan "no esta" sobre codigo intacto. Normalizar antes de seguir.')
+  }
+}
+
+// =====================================================================
 // Resultado
 // =====================================================================
 
 const GUARDAS = ['contraste', 'supuesto-marca', 'movimiento', 'literales', 'variables',
-                 'sin-cdn', 'sin-rasterizadas', 'fuentes']
+                 'sin-cdn', 'sin-rasterizadas', 'fuentes', 'finales-de-linea']
 
 console.log('Guardas del sistema de diseño\n')
 

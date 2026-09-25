@@ -267,6 +267,20 @@
 
 .formulario--angosto { max-width: var(--ancho-modal); }
 
+/* ------------------------------------------------ Marcas y categorias */
+
+/* Las dos listas caben una al lado de la otra en una pantalla de escritorio, que
+   es donde se administra esto. auto-fit y no dos columnas fijas: en una ventana
+   angosta se apilan solas, sin media query. */
+.listas-pareja {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--ancho-formulario), 1fr));
+  gap: var(--e-6);
+  align-items: start;
+}
+
+.seccion__titulo { margin-bottom: var(--e-3); }
+
 /* --------------------------------------------------------- Punto de venta */
 
 /* El carrito manda en ancho: es donde se mira mientras se arma la venta. El panel

@@ -95,6 +95,15 @@ const CASOS = [
     romper: (contenido) => `${contenido}\n.colado { background-image: url("iconos/lupa.png"); }\n`,
   },
   {
+    guarda: 'finales-de-linea',
+    porque: 'un archivo convertido a CRLF, que no se ve y desarma los anclajes de romper.mjs',
+    archivo: COMPONENTES,
+    // Se construye por codigo y no escribiendo "\r": este caso comprueba justamente
+    // que nadie confunda un escape con el byte, empezando por el caso mismo.
+    romper: (contenido) =>
+      contenido.replaceAll(String.fromCharCode(10), String.fromCharCode(13, 10)),
+  },
+  {
     guarda: 'fuentes',
     porque: 'la familia que declara tokens.css dejando de estar importada, '
       + 'que el navegador sustituye en silencio',

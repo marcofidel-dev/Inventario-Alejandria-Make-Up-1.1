@@ -14,12 +14,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.alejandriamakeup.pos.seguridad.SesionHttp;
-import com.alejandriamakeup.pos.ventas.recibo.ServicioRecibo;
 import com.alejandriamakeup.pos.ventas.dto.PeticionesVentas;
 import com.alejandriamakeup.pos.ventas.dto.VentaDto;
+import com.alejandriamakeup.pos.ventas.recibo.AbridorDelSistema;
+import com.alejandriamakeup.pos.ventas.recibo.ServicioRecibo;
 
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
@@ -36,10 +38,13 @@ public class VentasController {
 
     private final ServicioVenta servicioVenta;
     private final ServicioRecibo servicioRecibo;
+    private final AbridorDelSistema abridor;
 
-    public VentasController(ServicioVenta servicioVenta, ServicioRecibo servicioRecibo) {
+    public VentasController(ServicioVenta servicioVenta, ServicioRecibo servicioRecibo,
+                            AbridorDelSistema abridor) {
         this.servicioVenta = servicioVenta;
         this.servicioRecibo = servicioRecibo;
+        this.abridor = abridor;
     }
 
     /**
@@ -131,6 +136,26 @@ public class VentasController {
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "inline; filename=\"" + servicioRecibo.nombreDeArchivo(id) + "\"")
                 .body(servicioRecibo.pdf(id));
+    }
+
+    /**
+     * Abre el recibo en el visor de PDF del sistema.
+     *
+     * <p>La aplicación vive en un navegador en modo app, sin barra de direcciones. Un
+     * PDF servido por HTTP abriría ahí una ventana de navegador suelta, encima de la
+     * pantalla de cobro y con la clienta enfrente. El visor del sistema es el que la
+     * dueña ya sabe usar para imprimir.
+     *
+     * <p><strong>La ruta se resuelve dentro de la transacción y el proceso se lanza
+     * fuera.</strong> Con el pool de una conexión, arrancar un programa de escritorio
+     * con la conexión tomada la retiene todo ese rato.
+     *
+     * <p>Sin cuerpo en la respuesta: no hay nada que decir que la pantalla no sepa ya.
+     */
+    @PostMapping("/{id}/recibo/apertura")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void abrirRecibo(@PathVariable long id) {
+        abridor.abrir(servicioRecibo.archivo(id));
     }
 
     /**

@@ -1,6 +1,7 @@
-import { BarChart3, Boxes, LogOut, Package, ShoppingCart, Truck, Wallet } from 'lucide-react'
+import { BarChart3, Boxes, LogOut, ShoppingCart, Truck, Wallet } from 'lucide-react'
 
 import { Boton } from '../componentes/Boton.jsx'
+import { etiqueta } from '../etiquetas.js'
 import { PERMISOS, useSesion } from '../sesion/SesionContext.jsx'
 
 /**
@@ -15,8 +16,15 @@ import { PERMISOS, useSesion } from '../sesion/SesionContext.jsx'
  * LA NAVEGACION ESTA ORDENADA POR FRECUENCIA DE USO REAL, no por como se
  * construyo el sistema. Vender va a ser el 90% del uso y va primero. Carga inicial
  * se usa unos dias al principio de la vida del sistema y despues nunca, asi que no
- * es un modulo: es la ultima pestaña de Inventario. Ajustes tampoco es cotidiano,
- * es excepcional, y esta al lado.
+ * es un modulo: es una pestaña de Inventario. Ajustes tampoco es cotidiano, es
+ * excepcional, y esta al lado.
+ *
+ * INVENTARIO ES UNA SOLA SECCION Y ANTES ERAN DOS. Catalogo e Inventario acabaron
+ * pareciendo dos puertas al mismo sitio: al quitarle al catalogo la creacion de
+ * productos, esa capacidad se mudo a Carga inicial y a la compra, y lo que quedaba
+ * de Catalogo —buscar, ver stock, editar precio— es exactamente lo que iba a
+ * mostrar Existencias. Se fusionaron con el nombre que usa la dueña, y Existencias
+ * desaparecio por duplicada.
  *
  * LO QUE TODAVIA NO EXISTE SE DECLARA IGUAL, deshabilitado y diciendolo. Asi la
  * estructura no hay que rediseñarla cuando lleguen el POS o las metricas, que es
@@ -47,18 +55,14 @@ const SECCIONES = [
     permiso: PERMISOS.operarCaja,
   },
   {
-    id: 'catalogo',
-    texto: 'Catálogo',
-    icono: Package,
+    id: 'inventario',
+    texto: 'Inventario',
+    icono: Boxes,
     pestanas: [
       { id: 'productos', texto: 'Productos' },
-      {
-        id: 'marcas',
-        texto: 'Marcas y categorías',
-        permiso: PERMISOS.editarCatalogo,
-        proximamente: 'Por ahora las marcas y las categorías se crean desde el formulario '
-          + 'de producto.',
-      },
+      { id: 'ajustes', texto: 'Ajustes', permiso: PERMISOS.ajustarInventario },
+      { id: 'carga-inicial', texto: 'Carga inicial', permiso: PERMISOS.cargarInventarioInicial },
+      { id: 'marcas', texto: 'Marcas y categorías', permiso: PERMISOS.editarCatalogo },
     ],
   },
   {
@@ -68,20 +72,6 @@ const SECCIONES = [
     pestanas: [
       { id: 'compras', texto: 'Compras', permiso: PERMISOS.registrarCompras },
       { id: 'proveedores', texto: 'Proveedores', permiso: PERMISOS.gestionarProveedores },
-    ],
-  },
-  {
-    id: 'inventario',
-    texto: 'Inventario',
-    icono: Boxes,
-    pestanas: [
-      {
-        id: 'existencias',
-        texto: 'Existencias',
-        proximamente: 'Por ahora las existencias se ven en la lista de productos.',
-      },
-      { id: 'ajustes', texto: 'Ajustes', permiso: PERMISOS.ajustarInventario },
-      { id: 'carga-inicial', texto: 'Carga inicial', permiso: PERMISOS.cargarInventarioInicial },
     ],
   },
   {
@@ -98,7 +88,7 @@ const SECCIONES = [
  *
  * Una seccion con pestañas se dibuja si al menos una de sus pestañas sobrevive al
  * filtro. De ahi sale solo el comportamiento que se quiere: a la EMPLEADA le
- * aparece Inventario con Existencias nada mas, y Compras no le aparece porque
+ * aparece Inventario con Productos nada mas, y Compras no le aparece porque
  * ninguna de sus dos pestañas es suya.
  */
 export function seccionesVisibles(puede) {
@@ -137,7 +127,7 @@ export function Armazon({ vista, alCambiarVista, children }) {
         <span className="encabezado__marca">Alejandria MakeUp</span>
         <div className="encabezado__usuario">
           <span>{usuario.nombre}</span>
-          <span className="insignia insignia--neutra">{usuario.rol}</span>
+          <span className="insignia insignia--neutra">{etiqueta(usuario.rol)}</span>
           <Boton variante="plano" icono={LogOut} onClick={salir}>Salir</Boton>
         </div>
       </header>

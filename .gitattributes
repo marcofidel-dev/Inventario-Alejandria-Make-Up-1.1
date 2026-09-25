@@ -1,0 +1,19 @@
+# El árbol es LF, en disco y en el índice.
+#
+# No es preferencia de estilo: `frontend/pruebas/romper.mjs` y `guardas/romper.mjs`
+# localizan el código que van a mutar con cadenas que llevan `\n` literal. Un archivo
+# guardado con CRLF hace que todo anclaje de dos o más líneas deje de encontrarse, y
+# el caso reporta "NO CAE — el caso esperaba encontrar … y no está": se lee como una
+# prueba que dejó de cubrir su regla, cuando el código está intacto. Una guarda que
+# deja de cubrir sin avisar es peor que no tenerla, así que además de esta
+# declaración hay una guarda que falla si algún archivo llega a tener CRLF.
+* text=auto eol=lf
+
+# Binarios: que git no los toque ni intente normalizarlos.
+*.jar    binary
+*.db     binary
+*.pdf    binary
+*.png    binary
+*.ico    binary
+*.woff   binary
+*.woff2  binary

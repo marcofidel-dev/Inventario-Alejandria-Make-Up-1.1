@@ -7,6 +7,8 @@ import { Aviso, AvisoDeError } from '../componentes/Aviso.jsx'
 import { Boton } from '../componentes/Boton.jsx'
 import { BuscadorDeVariante, descripcionDe } from '../componentes/BuscadorDeVariante.jsx'
 import { Campo } from '../componentes/Campo.jsx'
+import { etiqueta } from '../etiquetas.js'
+import { useRecibo } from '../ventas/useRecibo.js'
 import { formatearPesos } from './Catalogo.jsx'
 
 /**
@@ -260,15 +262,15 @@ export function Venta({ catalogo, alIrA }) {
           <fieldset className="formulario">
             <legend>Cómo paga</legend>
             {METODOS.map((metodo) => (
-              <label key={metodo.id} className="opcion">
+              <label key={metodo} className="opcion">
                 <input
                   type="radio"
                   name="metodo-de-pago"
-                  value={metodo.id}
-                  checked={metodoPago === metodo.id}
-                  onChange={() => { setMetodoPago(metodo.id); setRecibido('') }}
+                  value={metodo}
+                  checked={metodoPago === metodo}
+                  onChange={() => { setMetodoPago(metodo); setRecibido('') }}
                 />
-                <span>{metodo.texto}</span>
+                <span>{etiqueta(metodo)}</span>
               </label>
             ))}
           </fieldset>
@@ -410,13 +412,9 @@ function Carrito({ lineas, alCambiar, alQuitar, alTerminarCantidad }) {
 
 // ------------------------------------------------------------------ efectivo
 
-const METODOS = [
-  { id: 'EFECTIVO', texto: 'Efectivo' },
-  { id: 'TARJETA', texto: 'Tarjeta' },
-  { id: 'NEQUI', texto: 'Nequi' },
-  { id: 'DAVIPLATA', texto: 'Daviplata' },
-  { id: 'TRANSFERENCIA', texto: 'Transferencia' },
-]
+/** El orden en que se ofrecen. El nombre legible lo pone `etiqueta()`, que es el
+    mismo que usa el listado de ventas y el cierre de caja. */
+const METODOS = ['EFECTIVO', 'TARJETA', 'NEQUI', 'DAVIPLATA', 'TRANSFERENCIA']
 
 /**
  * Con cuanto paga y cuanto se le devuelve.
@@ -483,12 +481,21 @@ export function sugerenciasDeEfectivo(total) {
  * significa que el total que se cobro no era el que se estaba viendo.
  */
 function Comprobante({ venta, uuidReutilizado, cambioQueMostroLaPantalla }) {
+  // "Ver recibo" solo si el PDF existe. Ofrecerlo para que despues conteste que no hay
+  // ninguno es peor que no ofrecerlo, y aqui hay una clienta esperando.
+  const recibo = useRecibo()
   const discrepa = venta.cambio !== null && cambioQueMostroLaPantalla !== null
     && venta.cambio !== cambioQueMostroLaPantalla
 
   return (
     <>
-      <Aviso tipo="exito" titulo={`${venta.consecutivo} cobrada`}>
+      <Aviso
+        tipo="exito"
+        titulo={`${venta.consecutivo} cobrada`}
+        accion={venta.rutaRecibo
+          ? { texto: 'Ver recibo', alPulsar: () => recibo.abrir(venta.id) }
+          : undefined}
+      >
         <span className="monto">{formatearPesos(venta.total)}</span>
         {venta.cambio !== null && (
           <>
@@ -497,6 +504,12 @@ function Comprobante({ venta, uuidReutilizado, cambioQueMostroLaPantalla }) {
           </>
         )}
       </Aviso>
+
+      {/* En tono de alerta y no de error: la venta salio bien y la plata entro. Lo
+          que fallo es un papel que se puede volver a sacar. */}
+      {recibo.error && (
+        <Aviso tipo="alerta" titulo="No se pudo abrir el recibo">{recibo.error}</Aviso>
+      )}
 
       {discrepa && (
         <Aviso tipo="alerta" titulo="El cambio no coincide con el que mostró la pantalla">

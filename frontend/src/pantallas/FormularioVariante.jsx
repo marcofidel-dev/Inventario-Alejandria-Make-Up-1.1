@@ -65,10 +65,14 @@ export function FormularioVariante({ catalogo, variante, productoInicial, alCerr
 
   const esCombinacionRepetida = error?.codigo === CODIGOS.unicidadViolada
 
+  // Amplio solo al crear: crear es el paso de captura, encadenado detras del alta
+  // de producto mientras se copia una factura. Editar una variante suelta desde la
+  // lista de productos es un campo o dos y no necesita media pantalla.
   return (
     <Modal
       titulo={editando ? 'Editar variante' : 'Nueva variante'}
       alCerrar={alCerrar}
+      amplio={!editando}
       acciones={
         <>
           <Boton variante="plano" onClick={alCerrar} disabled={guardando}>Cancelar</Boton>
@@ -80,19 +84,21 @@ export function FormularioVariante({ catalogo, variante, productoInicial, alCerr
       }
     >
       <div className="formulario">
-        <Campo etiqueta="Producto" error={detalleDe(error, 'productoId')}>
-          {(props) => (
-            <select {...props} value={productoId} disabled={editando}
-                    onChange={(e) => setProductoId(e.target.value)}>
-              <option value="">Elegir…</option>
-              {catalogo.productos.map((producto) => (
-                <option key={producto.id} value={producto.id}>
-                  {nombreCompleto(catalogo, producto)}
-                </option>
-              ))}
-            </select>
-          )}
-        </Campo>
+        <div className="formulario__ancho">
+          <Campo etiqueta="Producto" error={detalleDe(error, 'productoId')}>
+            {(props) => (
+              <select {...props} value={productoId} disabled={editando}
+                      onChange={(e) => setProductoId(e.target.value)}>
+                <option value="">Elegir…</option>
+                {catalogo.productos.map((producto) => (
+                  <option key={producto.id} value={producto.id}>
+                    {nombreCompleto(catalogo, producto)}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Campo>
+        </div>
 
         <div className="formulario__pareja">
           <Campo etiqueta="Tono" value={tono} autoFocus={!editando}

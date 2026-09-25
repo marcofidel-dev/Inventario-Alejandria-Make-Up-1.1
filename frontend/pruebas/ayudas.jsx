@@ -20,14 +20,21 @@ export function catalogoDePrueba(ajustes = {}) {
       { id: 101, nombre: 'Máscara de pestañas', marcaId: 2, categoriaId: 11, descripcion: null, activo: true },
     ],
     variantes: [
-      variante({ id: 1000, productoId: 100, tono: 'Rojo carmín', precioVenta: 32000, stock: 7 }),
-      variante({ id: 1001, productoId: 100, tono: 'Nude', precioVenta: 32000, stock: 1, stockMinimo: 3 }),
-      variante({ id: 1002, productoId: 101, tono: null, tamano: '9 ml', precioVenta: 45000, stock: 0 }),
+      // `descripcion` va escrita a mano y con el separador del backend, no derivada de
+      // los otros campos: derivarla seria reimplementar Descripcion.de() dentro del
+      // fixture, y entonces las pruebas no podrian notar que el front y el backend
+      // dejaron de decir lo mismo — que es exactamente lo que paso.
+      variante({ id: 1000, productoId: 100, tono: 'Rojo carmín', precioVenta: 32000, stock: 7,
+        descripcion: 'Loréal|Labial mate|Rojo carmín' }),
+      variante({ id: 1001, productoId: 100, tono: 'Nude', precioVenta: 32000, stock: 1, stockMinimo: 3,
+        descripcion: 'Loréal|Labial mate|Nude' }),
+      variante({ id: 1002, productoId: 101, tono: null, tamano: '9 ml', precioVenta: 45000, stock: 0,
+        descripcion: 'Maybelline|Máscara de pestañas|9 ml' }),
       // Sin historial: creada dentro de un borrador de compra que todavia no llega.
       // Va en el fixture compartido a proposito — el backend SI la manda, y una
       // prueba que afirme que no se lista no demuestra nada si nunca estuvo.
       variante({ id: 1003, productoId: 100, tono: 'Coral pendiente', precioVenta: 32000,
-        stock: 0, conHistorial: false }),
+        stock: 0, conHistorial: false, descripcion: 'Loréal|Labial mate|Coral pendiente' }),
     ],
     ...ajustes,
   }
@@ -37,6 +44,9 @@ export function variante(campos) {
   return {
     id: 1,
     productoId: 100,
+    // La arma el backend con Descripcion.de(): marca, producto, tono y tamaño unidos
+    // por la barra pegada. El front la muestra tal cual y no la reconstruye.
+    descripcion: 'Loréal|Labial mate',
     tono: null,
     tamano: null,
     codigoBarras: null,
@@ -126,7 +136,13 @@ export function ventaDePrueba(campos = {}) {
   }
 }
 
-/** Una fila del listado, con la forma de VentaDto.Resumen: sin lineas y sin costos. */
+/**
+ * Una fila del listado, con la forma de VentaDto.Resumen: sin lineas y sin costos.
+ *
+ * `rutaRecibo` viaja aqui porque el record del backend la trae, y es lo que decide
+ * que ofrece cada fila: "Ver recibo" si hay archivo, "Generar recibo" si esta en
+ * nulo. Un fixture sin ella dejaria a las pruebas afirmando sobre una API que no es.
+ */
 export function resumenDeVenta(campos = {}) {
   return {
     id: 500,
@@ -137,6 +153,7 @@ export function resumenDeVenta(campos = {}) {
     estado: 'COMPLETADA',
     usuario: 'Camila',
     motivoAnulacion: null,
+    rutaRecibo: 'recibos/2026/08/V-000123.pdf',
     ...campos,
   }
 }

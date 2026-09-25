@@ -25,10 +25,13 @@ const DEL_DIA = [
     motivoAnulacion: 'cobro mal hecho' }),
 ]
 
-async function montar({ ventas = DEL_DIA, alAnular } = {}) {
+async function montar({ ventas = DEL_DIA, alAnular, alAbrirRecibo, alGenerarRecibo } = {}) {
   const pedidas = []
 
   const espia = fetchFalso({
+    // Las mas especificas primero: fetchFalso resuelve por prefijo.
+    '/api/v1/ventas/500/recibo/apertura': alAbrirRecibo ?? { estado: 204 },
+    '/api/v1/ventas/501/recibo': alGenerarRecibo ?? { cuerpo: resumenDeVenta({ id: 501 }) },
     '/api/v1/ventas': (ruta, opciones) => {
       if (opciones?.method === 'POST') return alAnular ?? { cuerpo: {} }
       pedidas.push(ruta)
@@ -104,6 +107,92 @@ describe('el listado del día', () => {
   it('dice que no hubo ventas cuando el día está vacío', async () => {
     await montar({ ventas: [] })
     expect(await screen.findByText('No hubo ventas ese día.')).toBeInTheDocument()
+  })
+})
+
+describe('el recibo', () => {
+  /**
+   * LO QUE DECIDE ES `rutaRecibo`, no el estado ni la fecha. Una venta con archivo se
+   * abre; una sin archivo hay que crearlo primero. Ofrecer "Ver recibo" sobre una
+   * venta sin PDF seria prometer algo que termina en un 404 con la clienta esperando.
+   */
+  it('ofrece ver el recibo cuando hay archivo y generarlo cuando no', async () => {
+    await montar({
+      ventas: [
+        resumenDeVenta({ id: 500, consecutivo: 'V-000123' }),
+        resumenDeVenta({ id: 501, consecutivo: 'V-000124', rutaRecibo: null }),
+      ],
+    })
+    await waitFor(() => expect(filas()).toHaveLength(2))
+
+    expect(within(filas()[0]).getByRole('button', { name: 'Ver recibo' })).toBeInTheDocument()
+    expect(within(filas()[0]).queryByRole('button', { name: 'Generar recibo' })).not.toBeInTheDocument()
+
+    expect(within(filas()[1]).getByRole('button', { name: 'Generar recibo' })).toBeInTheDocument()
+    expect(within(filas()[1]).queryByRole('button', { name: 'Ver recibo' })).not.toBeInTheDocument()
+  })
+
+  /**
+   * ABRE EL VISOR DEL SISTEMA, y eso es un POST al backend y no una navegación.
+   * La aplicacion corre en una ventana en modo app: pedir el PDF por HTTP abriria una
+   * ventana de navegador suelta encima del mostrador. Si alguien "simplifica" esto a
+   * un enlace, la prueba cae.
+   */
+  it('ver el recibo se lo pide al backend, no abre una ventana del navegador', async () => {
+    const usuario = userEvent.setup()
+    const abrirVentana = vi.fn()
+    vi.stubGlobal('open', abrirVentana)
+    const { espia } = await montar()
+    await waitFor(() => expect(filas()).toHaveLength(3))
+
+    await usuario.click(within(filas()[0]).getByRole('button', { name: 'Ver recibo' }))
+
+    const llamadas = espia.mock.calls.map(([ruta, o]) => `${o?.method} ${ruta}`)
+    expect(llamadas).toContain('POST /api/v1/ventas/500/recibo/apertura')
+    expect(abrirVentana).not.toHaveBeenCalled()
+  })
+
+  /** Generar deja la fila lista para verlo: se vuelve a pedir el listado. */
+  it('generar el recibo recarga el listado para que la fila ya ofrezca verlo', async () => {
+    const usuario = userEvent.setup()
+    const { espia, pedidas } = await montar({
+      ventas: [resumenDeVenta({ id: 501, consecutivo: 'V-000124', rutaRecibo: null })],
+    })
+    await waitFor(() => expect(filas()).toHaveLength(1))
+    const listadosAntes = pedidas.length
+
+    await usuario.click(screen.getByRole('button', { name: 'Generar recibo' }))
+
+    await waitFor(() => expect(pedidas.length).toBe(listadosAntes + 1))
+    expect(espia.mock.calls.map(([ruta, o]) => `${o?.method} ${ruta}`))
+      .toContain('POST /api/v1/ventas/501/recibo')
+  })
+
+  /**
+   * UN RECIBO QUE NO ABRE NO ES UN ERROR DE LA VENTA. La venta existe, la plata
+   * entro. Va en tono de alerta, con el mensaje del backend —que dice donde quedo el
+   * archivo— y sin tumbar la tabla.
+   */
+  it('si no se puede abrir, lo dice sin presentarlo como un error de la venta', async () => {
+    const usuario = userEvent.setup()
+    await montar({
+      alAbrirRecibo: {
+        estado: 409,
+        cuerpo: {
+          codigo: 'SIN_VISOR',
+          error: 'Este equipo no tiene con qué abrir el PDF. El archivo está en C:/recibos/V-000123.pdf y se puede abrir a mano.',
+        },
+      },
+    })
+    await waitFor(() => expect(filas()).toHaveLength(3))
+
+    await usuario.click(within(filas()[0]).getByRole('button', { name: 'Ver recibo' }))
+
+    const aviso = await screen.findByText(/C:\/recibos\/V-000123.pdf/)
+    expect(aviso).toBeInTheDocument()
+    expect(aviso.closest('.aviso')).toHaveClass('aviso--alerta')
+    // Y la tabla sigue ahi: no se reemplazo la pantalla por un error.
+    expect(filas()).toHaveLength(3)
   })
 })
 

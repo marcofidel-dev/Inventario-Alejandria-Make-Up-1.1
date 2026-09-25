@@ -7,16 +7,30 @@ import { useEffect, useRef } from 'react'
  * Lo del teclado no es accesibilidad de adorno: en una caja se trabaja con las
  * manos en el teclado mucho mas de lo que se cree, y un modal del que hay que
  * salir con el raton interrumpe el ritmo de quien esta cargando cien productos.
+ *
+ * `amplio` es para los formularios de captura —producto y variante durante una
+ * compra—: usan el ancho de la pantalla y reparten los campos en dos columnas, para
+ * que quepan sin desplazamiento interno. Los demas modales son confirmaciones de
+ * dos lineas y a 56rem de ancho se leerian peor, no mejor.
  */
-export function Modal({ titulo, alCerrar, children, acciones }) {
+export function Modal({ titulo, alCerrar, children, acciones, amplio = false }) {
   const caja = useRef(null)
 
   useEffect(() => {
     const anterior = document.activeElement
-    const primero = caja.current?.querySelector(
-      'input, select, textarea, button:not([disabled])',
-    )
-    primero?.focus()
+
+    // El foco entra al primer control, PERO SOLO SI NADIE LO RECLAMO YA. Un campo
+    // con autoFocus se enfoca al montar, antes que este efecto, y pisarselo mandaba
+    // el foco al primer control aunque no fuera el que hay que llenar: al encadenar
+    // producto -> variante durante una compra, el producto ya viene elegido y el
+    // cursor tiene que caer en el tono. Se notaba solo tecleando, que es justo lo
+    // que nadie hace al revisar un modal.
+    if (!caja.current?.contains(document.activeElement)) {
+      const primero = caja.current?.querySelector(
+        'input, select, textarea, button:not([disabled])',
+      )
+      primero?.focus()
+    }
 
     function alPulsarTecla(evento) {
       if (evento.key === 'Escape') {
@@ -52,7 +66,8 @@ export function Modal({ titulo, alCerrar, children, acciones }) {
 
   return (
     <div className="modal-fondo" onMouseDown={(e) => e.target === e.currentTarget && alCerrar()}>
-      <div className="modal" role="dialog" aria-modal="true" aria-label={titulo} ref={caja}>
+      <div className={amplio ? 'modal modal--amplio' : 'modal'} role="dialog"
+           aria-modal="true" aria-label={titulo} ref={caja}>
         <h2 className="modal__titulo">{titulo}</h2>
         {children}
         {acciones && <div className="modal__acciones">{acciones}</div>}

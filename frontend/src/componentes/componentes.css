@@ -137,6 +137,13 @@
   background: var(--fondo);
 }
 
+/* LAS TABLAS DE CAPTURA NO SE DESPLAZAN POR DENTRO: crecen y desplaza la pagina.
+   Una factura de cuarenta lineas dentro de una caja de alto fijo obliga a mover dos
+   barras distintas —la de la caja y la de la pantalla— para llegar a la linea que se
+   esta escribiendo. Y `overflow: auto` ademas recortaba el desplegable de
+   sugerencias, que es lo que se estaba usando. */
+.tabla-envoltura--captura { overflow: visible; }
+
 .tabla th {
   position: sticky;
   top: 0;
@@ -204,6 +211,25 @@
   animation: modal-entra var(--mov-medio) var(--curva-entrada);
 }
 
+/* El modal de captura masiva. `min()` y no un ancho fijo: en una pantalla chica
+   sigue mandando el viewport, y el max-width solo pone el techo. */
+.modal--amplio { max-width: min(100%, var(--ancho-modal-amplio)); }
+
+/* Dos columnas dentro del modal amplio: es lo que baja la altura por debajo del
+   alto de la ventana y quita el desplazamiento interno. Un par ya agrupado
+   —tono/tamano, precio/minimo— entra entero en una columna, asi que los dos pares
+   de la variante quedan en la misma fila en vez de una debajo de otra. */
+.modal--amplio .formulario {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+}
+
+/* Lo que no se parte: el desplegable de producto, porque su texto es "Marca ·
+   Producto" y es lo mas largo del formulario, y los avisos, que se leen de corrido. */
+.modal--amplio .formulario > .formulario__ancho,
+.modal--amplio .formulario > .aviso { grid-column: 1 / -1; }
+
 @keyframes modal-fondo-entra {
   from { opacity: 0; }
   to   { opacity: 1; }
@@ -266,14 +292,22 @@
 }
 
 .buscador__lista {
-  position: absolute;
+  /* `fixed` y no `absolute`: en la captura de compras la lista vive dentro de una
+     celda de una tabla dentro de un contenedor con scroll, y ahi un hijo absoluto lo
+     recorta el primer ancestro que no sea `overflow: visible`. Las coordenadas las
+     pone el componente, que mide el campo. */
+  position: fixed;
   z-index: 5;
-  left: 0;
-  right: 0;
-  margin-top: var(--e-1);
-  /* Ocho filas, que es el maximo de sugerencias: mas abajo no cabe en pantalla
-     con el teclado abierto y nadie lee la novena. */
-  max-height: calc(var(--alto-fila) * 8);
+  margin: var(--e-1) 0;
+  /* MAS ANCHA QUE EL CAMPO. En la captura de compras el campo es una celda de la
+     columna "Variante" y una descripcion completa no cabe: cada opcion se partia en
+     dos lineas y ocho no entraban en ninguna altura razonable. El componente lee
+     este minimo del estilo calculado, asi que el numero sigue viviendo en los tokens
+     y no escrito dentro del JavaScript. */
+  min-width: var(--ancho-formulario);
+  /* La altura maxima la pone el componente con el espacio que de verdad hay. Aqui no
+     va una cuenta de filas: suponia una linea por opcion y dejaba la lista con scroll
+     propio —cinco opciones y media— con media pantalla libre debajo. */
   overflow-y: auto;
   padding: var(--e-1);
   list-style: none;

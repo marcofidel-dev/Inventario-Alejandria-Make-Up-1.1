@@ -37,7 +37,7 @@ async function montar(datos = catalogoDePrueba()) {
   const espia = fetchFalso({ '/api/v1/catalogo': { cuerpo: datos } })
   vi.stubGlobal('fetch', espia)
   render(<PantallaCatalogo />)
-  await screen.findByRole('heading', { name: 'Catálogo' })
+  await screen.findByRole('heading', { name: 'Productos' })
   return espia
 }
 
@@ -158,7 +158,7 @@ describe('Catálogo', () => {
     const irA = vi.fn()
     vi.stubGlobal('fetch', fetchFalso({ '/api/v1/catalogo': { cuerpo: CATALOGO_VACIO } }))
     render(<PantallaCatalogo alIrA={irA} />)
-    await screen.findByRole('heading', { name: 'Catálogo' })
+    await screen.findByRole('heading', { name: 'Productos' })
 
     expect(screen.getByText('Todavía no hay productos con existencias')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Crear el primer producto/ })).not.toBeInTheDocument()

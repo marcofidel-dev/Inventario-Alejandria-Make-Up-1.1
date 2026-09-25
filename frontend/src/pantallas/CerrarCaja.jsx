@@ -7,6 +7,7 @@ import { Campo } from '../componentes/Campo.jsx'
 import {
   ContadorDeDenominaciones, conteoParaEnviar, totalContado,
 } from '../componentes/ContadorDeDenominaciones.jsx'
+import { etiqueta } from '../etiquetas.js'
 import { formatearPesos } from './Catalogo.jsx'
 
 /**
@@ -222,7 +223,7 @@ function Revelacion({ arqueo, alTerminar }) {
               <tbody>
                 {ventasPorMetodo.map((fila) => (
                   <tr key={fila.metodo}>
-                    <td>{NOMBRE_DE_METODO[fila.metodo] ?? fila.metodo}</td>
+                    <td>{etiqueta(fila.metodo)}</td>
                     <td className="numero monto">{fila.cantidad}</td>
                     <td className="numero monto">{formatearPesos(fila.total)}</td>
                   </tr>
@@ -247,14 +248,6 @@ function Revelacion({ arqueo, alTerminar }) {
       </div>
     </>
   )
-}
-
-const NOMBRE_DE_METODO = {
-  EFECTIVO: 'Efectivo',
-  TARJETA: 'Tarjeta',
-  NEQUI: 'Nequi',
-  DAVIPLATA: 'Daviplata',
-  TRANSFERENCIA: 'Transferencia',
 }
 
 /**

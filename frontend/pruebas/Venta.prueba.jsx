@@ -42,10 +42,14 @@ function PantallaDeVenta({ alIrA }) {
  * Monta el mostrador. `alCobrar` recibe el cuerpo ya parseado y devuelve la respuesta,
  * para que cada prueba decida que contesta el servidor en cada intento.
  */
-async function montar({ sesion = sesionAbierta(), alCobrar, alIrA } = {}) {
+async function montar({ sesion = sesionAbierta(), alCobrar, alIrA, alAbrirRecibo } = {}) {
   const enviados = []
 
   const espia = fetchFalso({
+    // Antes que '/api/v1/ventas': fetchFalso resuelve por prefijo y se queda con la
+    // primera que encaja.
+    '/api/v1/ventas/500/recibo/apertura': alAbrirRecibo ?? { estado: 204 },
+
     '/api/v1/caja/sesiones/actual': () => (sesion
       ? { cuerpo: sesion }
       : { estado: 404, cuerpo: { codigo: 'NO_ENCONTRADO', error: 'No hay ninguna sesión.' } }),
@@ -437,5 +441,86 @@ describe('el stock de la búsqueda', () => {
     expect(result.current.filas.find((f) => f.id === 1001).stock).toBe(3)
     expect(result.current.filas.find((f) => f.id === 1002).stock).toBe(2)
     expect(espia.mock.calls).toHaveLength(llamadas)
+  })
+})
+
+describe('el recibo, con la clienta enfrente', () => {
+  /**
+   * EL MOMENTO EN QUE SE NECESITA ES ESTE. Buscar la venta en el listado del dia para
+   * sacar el papel que se acaba de pedir es un rodeo con alguien esperando en el
+   * mostrador, asi que el boton va en la franja del cobro.
+   *
+   * NO ES UN MODAL Y NO INTERRUMPE: la franja ya esta ahi y la pantalla ya quedo lista
+   * para la clienta siguiente. Quien no quiere el recibo no tiene que cerrar nada.
+   */
+  it('tras cobrar ofrece ver el recibo, y abrirlo es un POST al backend', async () => {
+    const usuario = userEvent.setup()
+    const abrirVentana = vi.fn()
+    vi.stubGlobal('open', abrirVentana)
+
+    const { espia } = await montar({
+      alCobrar: (cuerpo) => ({
+        estado: 201,
+        cuerpo: ventaDePrueba({ uuid: cuerpo.uuid, rutaRecibo: 'recibos/2026/08/V-000123.pdf' }),
+      }),
+    })
+
+    await elegir(usuario, 'carmín')
+    await usuario.click(screen.getByRole('button', { name: /^32.000$/ }))
+    await cobrarEnEfectivo(usuario)
+
+    await usuario.click(await screen.findByRole('button', { name: 'Ver recibo' }))
+
+    const llamadas = espia.mock.calls.map(([ruta, o]) => `${o?.method} ${ruta}`)
+    expect(llamadas).toContain('POST /api/v1/ventas/500/recibo/apertura')
+    // El visor es el del sistema: si esto se convierte en un enlace o un window.open,
+    // en modo app se abre una ventana de navegador suelta encima del mostrador.
+    expect(abrirVentana).not.toHaveBeenCalled()
+  })
+
+  /**
+   * Si el PDF no se genero —el generador atrapa su fallo y deja la venta valida— no
+   * hay nada que ver. Ofrecerlo para que despues conteste que no existe es peor que no
+   * ofrecerlo, justo en el momento de menos paciencia.
+   */
+  it('sin recibo generado no ofrece verlo', async () => {
+    const usuario = userEvent.setup()
+    await montar({
+      alCobrar: (cuerpo) => ({
+        estado: 201,
+        cuerpo: ventaDePrueba({ uuid: cuerpo.uuid, rutaRecibo: null }),
+      }),
+    })
+
+    await elegir(usuario, 'carmín')
+    await usuario.click(screen.getByRole('button', { name: /^32.000$/ }))
+    await cobrarEnEfectivo(usuario)
+
+    await screen.findByText(/cobrada/)
+    expect(screen.queryByRole('button', { name: 'Ver recibo' })).not.toBeInTheDocument()
+  })
+
+  /** Un recibo que no abre no vuelve dudosa la venta: la plata ya entro. */
+  it('si el recibo no abre, la venta sigue anunciada como cobrada', async () => {
+    const usuario = userEvent.setup()
+    await montar({
+      alCobrar: (cuerpo) => ({
+        estado: 201,
+        cuerpo: ventaDePrueba({ uuid: cuerpo.uuid, rutaRecibo: 'recibos/2026/08/V-000123.pdf' }),
+      }),
+      alAbrirRecibo: {
+        estado: 409,
+        cuerpo: { codigo: 'SIN_VISOR', error: 'Este equipo no tiene con qué abrir el PDF.' },
+      },
+    })
+
+    await elegir(usuario, 'carmín')
+    await usuario.click(screen.getByRole('button', { name: /^32.000$/ }))
+    await cobrarEnEfectivo(usuario)
+    await usuario.click(await screen.findByRole('button', { name: 'Ver recibo' }))
+
+    const aviso = await screen.findByText(/no tiene con qué abrir el PDF/)
+    expect(aviso.closest('.aviso')).toHaveClass('aviso--alerta')
+    expect(screen.getByText(/cobrada/)).toBeInTheDocument()
   })
 })

@@ -160,10 +160,19 @@ spring:
 - En `Venta` se guarda la **ruta relativa**.
 - El documento dice **"RECIBO"** o **"COMPROBANTE DE VENTA"**, nunca "FACTURA".
 - Generación detrás de una interfaz `GeneradorComprobante` → implementación `PdfReciboLocal` hoy, adaptador DIAN mañana sin reescribir el sistema.
+- **La descripción de la variante la arma `Descripcion.de()` y nadie más.** Separador: la barra vertical pegada, sin espacios — con espacios cuenta como palabra en la envoltura de 42 columnas y puede quedar sola al principio de la línea siguiente. El front la **muestra tal cual** y no la reconstruye: cuando la reconstruía, el buscador decía "Montoc · Polvos sueltos" y el recibo de esa misma venta "Montoc|Polvos sueltos", y no se notó hasta tener el papel en la mano.
+
+**Cómo se abre**
+- **Botón "Ver recibo" en la franja de éxito del cobro**, que es el momento en que se necesita: la clienta está enfrente. No es un modal — la franja ya está ahí y la pantalla ya quedó lista para la siguiente clienta, así que quien no quiere el recibo no tiene que cerrar nada. Aparece **solo si `rutaRecibo` no es nulo**: ofrecerlo para después contestar que no existe es peor que no ofrecerlo.
+- **En el listado del día, un botón por fila**: "Ver recibo" si hay archivo, "Generar recibo" si `rutaRecibo` está en nulo. `VentaDto.Resumen` trae `rutaRecibo` exactamente para eso.
+- **Lo abre el visor de PDF del sistema, no el navegador.** `POST /api/v1/ventas/{id}/recibo/apertura` y `Desktop.open`. La aplicación vive en una ventana en modo app sin barra de direcciones: pedir el PDF por HTTP dejaría una ventana de navegador suelta encima del mostrador. La ruta se resuelve **dentro** de la transacción y el proceso se lanza **fuera** — con el pool de una conexión, arrancar un programa de escritorio con la conexión tomada la retiene todo ese rato.
+- **Un recibo que no abre no vuelve dudosa la venta.** Va en tono de alerta y no de error, detrás del aviso de éxito: la plata ya entró y lo que falló es un papel que se puede volver a sacar. Sin visor asociado, el mensaje **dice dónde quedó el archivo** (`SIN_VISOR`), que es lo que hace falta para abrirlo a mano.
 
 ---
 
 ## 8. Convenciones de código
+
+**Finales de línea: LF, en disco y en el índice.** No es estilo. `pruebas/romper.mjs` y `guardas/romper.mjs` localizan el código que van a mutar con cadenas que llevan un salto de línea; con CRLF, todo anclaje de dos o más líneas deja de encontrarse y el caso reporta "no está" sobre código intacto — se lee como una prueba que dejó de cubrir su regla. Y no se ve: el archivo se abre igual, las pruebas pasan igual y `git diff` no lo menciona porque el índice normaliza. Lo declara `.gitattributes` y **lo comprueba una guarda** (`finales-de-linea`), porque una guarda que deja de cubrir sin avisar es peor que no tenerla.
 
 **Se conserva**
 - `GlobalExceptionHandler` global
@@ -190,6 +199,16 @@ spring:
 - El catálogo se carga **una vez** y se filtra en memoria, con la clave de búsqueda precalculada por variante. Ni una llamada por tecla: eso funciona en desarrollo con tres productos y se cae en el mostrador con el inventario real.
 - "Stock bajo" es `stock < stockMinimo`, el mismo criterio que `VarianteRepository.bajoMinimo()`, para que la pantalla y el backend no puedan discrepar. Agotado y bajo el mínimo no son lo mismo.
 
+**Estructura de la navegación**
+- Cinco secciones, ordenadas por frecuencia de uso real y no por cómo se construyó el sistema: **Vender · Caja · Inventario · Compras · Métricas**.
+- **Inventario es una sola sección con cuatro pestañas** —Productos · Ajustes · Carga inicial · Marcas y categorías— y antes eran dos. "Catálogo" e "Inventario" acabaron pareciendo dos puertas al mismo sitio: al quitarle al catálogo la creación de productos, esa capacidad se mudó a Carga inicial y a la compra, y lo que quedaba —buscar, ver stock, editar precio y stock mínimo— es exactamente lo que iba a mostrar la pestaña "Existencias". Se fusionaron con el nombre que usa la dueña; **"Catálogo" desapareció como sección y "Existencias" desapareció por duplicada**. Carga inicial queda de las últimas porque se usa unos días al principio de la vida del sistema y después nunca.
+- **Marcas y categorías administra, no crea**: renombrar, desactivar, reactivar y ver cuántos productos tiene cada una. Se crean desde el desplegable durante la compra o la carga inicial, cuando de verdad hacen falta. Desactivar no esconde nada de lo ya registrado: solo deja de ofrecerla al crear productos nuevos.
+
+**Etiquetas: ningún identificador de código en pantalla**
+- `DUENA` se llama así porque es un identificador de Java y el valor de un `CHECK` en SQLite. **El enum y el CHECK no se tocan** —cambiarlos exige migración—; lo que se traduce es lo que se pinta, y para eso está `src/etiquetas.js`, un solo mapa para toda la aplicación.
+- Un **guion bajo visible es un bug**, y también una palabra en mayúsculas sostenidas que nadie escribiría a mano. Lo protege una prueba que recorre lo renderizado buscando esa firma (`pruebas/Etiquetas.prueba.jsx`), no una revisión a ojo: `{usuario.rol}` se lee razonable en el código hasta que alguien ve "DUENA" en el encabezado.
+- El front sigue **ramificando sobre el valor del backend** (`estado === 'ANULADA'`), nunca sobre la etiqueta. `etiqueta()` traduce al pintar y nada más, y lo que no tiene traducción explícita lo humaniza en vez de devolverlo crudo.
+
 **Login**
 - Se **elige el nombre de una lista** (`GET /api/v1/auth/perfiles`, público, solo nombres). Sin el rol: no le sirve a quien entra y diría a cualquiera cuál cuenta administra el sistema. Teclear el nombre sería una vía directa al bloqueo, porque un nombre mal escrito da 401 y cuenta como intento.
 - PIN de 4 dígitos con **envío automático al cuarto**, sin botón "Entrar": en una caja se entra varias veces al día y ese clic sobra.
@@ -203,6 +222,12 @@ spring:
 **Carga inicial de existencias**
 - Es la pantalla con la que se mete el inventario real durante horas, así que se diseña **para no tocar el ratón**: el foco se encadena variante → cantidad → costo, y Enter en el costo agrega línea con el foco ya puesto en su primer campo.
 - El lote se envía completo al final porque el backend es todo-o-nada. Si una línea falla se marca **esa** línea, con el mensaje del backend que nombra la variante: volver a teclear cuarenta líneas por un error en la treinta y ocho sería imperdonable.
+
+**El buscador de variante**
+- **La lista de sugerencias se posiciona `fixed`, en coordenadas de ventana.** En la captura de compras vive dentro de una celda de una tabla dentro de un contenedor con scroll, y un hijo `absolute` lo recorta el primer ancestro que no sea `overflow: visible`: el desplegable quedaba **cortado a media fila** y la envoltura se llenaba de barras de scroll propias. Las tablas de captura además llevan `.tabla-envoltura--captura` (`overflow: visible`): crecen y desplaza la página, en vez de tener dos barras anidadas.
+- **El ancho no es el del campo.** La columna "Variante" mide unos 280px y una descripción completa no cabe, así que cada opción se partía en dos líneas. El mínimo (`--ancho-formulario`) va en CSS y el componente lo lee del estilo calculado, para que el número siga viviendo en los tokens.
+- **La altura máxima es el espacio libre medido, no una cuenta de filas.** Era `alto-de-fila × 8` = 288px, que da por hecho una línea por opción: con las de dos líneas la lista se quedaba con scroll propio mostrando **cinco y media, con 438px libres justo debajo**. Una cuenta de filas no puede saber cuánto mide una opción; el hueco de la pantalla sí se puede medir.
+- Abre **hacia el lado donde hay más sitio**: en una factura de cuarenta renglones las últimas líneas están siempre abajo.
 
 **Estados que hay que resolver, no solo el camino feliz**
 
@@ -223,6 +248,7 @@ spring:
 |---|---|
 | **Situación fiscal ante la DIAN** | En 2026 el documento equivalente POS electrónico es obligatorio para buena parte de los comerciantes. Un PDF local no tiene validez fiscal. Puede que no le aplique si está en régimen no responsable de IVA bajo los topes — confirmar con el contador o en el portal de la DIAN. |
 | **¿Segunda caja en el futuro?** | Reabriría toda la decisión de arquitectura. SQLite sobre carpeta compartida en red no es opción. |
+| **¿Hace falta fusionar marcas o categorías duplicadas?** | El índice normalizado de V4 atrapa "Loréal" contra "LOREAL", pero no "Loreal" contra "L'Oréal Paris": normalizados siguen siendo cadenas distintas y ningún índice puede atraparlas. Con dos personas escribiendo van a aparecer. Fusionar es reasignar los productos de una a otra y desactivar la que queda vacía — trabajo real, y solo vale la pena si el caso se da. **Mientras tanto la pantalla de marcas ofrece renombrar y desactivar, que cubren lo que se sabe que pasa**, y una prueba afirma que fusionar todavía no existe para que agregarlo sea una decisión y no un descuido. |
 | ~~**Separación de permisos dueña / empleada**~~ | **Resuelto:** dos roles en `Usuario`, permisos por rol en `PermisosPorRol` (la EMPLEADA por lista explícita de lo permitido, no de lo prohibido), impuestos por un interceptor que niega por defecto. |
 
 ---

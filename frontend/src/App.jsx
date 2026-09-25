@@ -11,6 +11,7 @@ import { Catalogo } from './pantallas/Catalogo.jsx'
 import { Compras } from './pantallas/Compras.jsx'
 import { ConfiguracionInicial } from './pantallas/ConfiguracionInicial.jsx'
 import { Login } from './pantallas/Login.jsx'
+import { MarcasYCategorias } from './pantallas/MarcasYCategorias.jsx'
 import { Proveedores } from './pantallas/Proveedores.jsx'
 import { Venta } from './pantallas/Venta.jsx'
 import { Ventas } from './pantallas/Ventas.jsx'
@@ -58,7 +59,7 @@ export default function App() {
 }
 
 /** La vista con la que abre la aplicacion: la lista de productos. */
-const VISTA_INICIAL = { seccion: 'catalogo', pestana: 'productos' }
+const VISTA_INICIAL = { seccion: 'inventario', pestana: 'productos' }
 
 function Sesion() {
   const { puede } = useSesion()
@@ -67,8 +68,8 @@ function Sesion() {
   const compras = useCompras()
 
   // Si alguien queda parado en una vista que no le corresponde —por ejemplo tras
-  // un cambio de usuario— se vuelve al catalogo, en vez de pintar una pantalla
-  // que va a dar 403 en cada llamada. Se pregunta por la estructura ya filtrada
+  // un cambio de usuario— se vuelve a la lista de productos, en vez de pintar una
+  // pantalla que va a dar 403 en cada llamada. Se pregunta por la estructura ya filtrada
   // del armazon para no mantener aqui una segunda copia de los permisos.
   const visibles = seccionesVisibles(puede)
   const seccion = visibles.find((s) => s.id === vista.seccion)
@@ -96,18 +97,20 @@ function Contenido({ vista, catalogo, compras, alIrA }) {
     // Sin pestañas: pestanaInicialDe() devuelve null y la vista queda en 'caja/'.
     case 'caja/':
       return <Caja />
-    case 'catalogo/productos':
-      // El catalogo no crea productos: su estado vacio manda a las dos pantallas
-      // por donde entra la mercancia, y para eso necesita mover la vista.
-      return <Catalogo catalogo={catalogo} alIrA={alIrA} />
     case 'compras/compras':
       return <Compras catalogo={catalogo} compras={compras} />
     case 'compras/proveedores':
       return <Proveedores compras={compras} />
+    case 'inventario/productos':
+      // Inventario no crea productos: su estado vacio manda a las dos pantallas
+      // por donde entra la mercancia, y para eso necesita mover la vista.
+      return <Catalogo catalogo={catalogo} alIrA={alIrA} />
     case 'inventario/ajustes':
       return <AjusteInventario catalogo={catalogo} />
     case 'inventario/carga-inicial':
       return <CargaInicial catalogo={catalogo} />
+    case 'inventario/marcas':
+      return <MarcasYCategorias catalogo={catalogo} />
     default:
       return (
         <Proximamente titulo="Esta pantalla todavía no existe">
