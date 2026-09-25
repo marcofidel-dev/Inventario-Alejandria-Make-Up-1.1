@@ -15,6 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -60,8 +61,17 @@ public class SesionCaja {
     @Column(name = "fecha_cierre")
     private LocalDateTime fechaCierre;
 
+    /**
+     * VESTIGIO DELIBERADO, siempre 0. El concepto de base inicial desapareció: el
+     * arqueo es solo el dinero que entró y salió durante la sesión. La columna sigue
+     * en la tabla (NOT NULL) para no reconstruir {@code sesion_caja} y su índice
+     * parcial de sesión única abierta, y sin setter para que nadie la escriba: el
+     * único valor posible es este 0. Las sesiones cerradas antes del cambio conservan
+     * la base con que se abrieron, y su {@code efectivo_esperado} congelado la incluye.
+     */
+    @Setter(AccessLevel.NONE)
     @Column(name = "base_inicial", nullable = false, columnDefinition = "INTEGER")
-    private long baseInicial;
+    private long baseInicial = 0;
 
     @Column(name = "efectivo_esperado", columnDefinition = "INTEGER")
     private Long efectivoEsperado;
@@ -74,9 +84,6 @@ public class SesionCaja {
 
     @Column(name = "monto_retirado", columnDefinition = "INTEGER")
     private Long montoRetirado;
-
-    @Column(name = "base_siguiente", columnDefinition = "INTEGER")
-    private Long baseSiguiente;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false)

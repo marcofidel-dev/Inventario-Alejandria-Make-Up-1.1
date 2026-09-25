@@ -166,7 +166,6 @@ class VentaHttpTest {
         deAyer.setConsecutivo("S-000999");
         deAyer.setUsuarioApertura(usuarioRepository.findById(idDuena).orElseThrow());
         deAyer.setFechaApertura(Fechas.ahora().minusDays(1));
-        deAyer.setBaseInicial(180_000);
         deAyer.setEstado(EstadoSesionCaja.ABIERTA);
         idSesionDeAyer = sesionRepository.save(deAyer).getId();
 
@@ -185,10 +184,10 @@ class VentaHttpTest {
         Respuesta cierre = duena.post("/api/v1/caja/sesiones/" + idSesionDeAyer + "/cierre",
                 "{\"conteo\":[{\"denominacion\":50000,\"cantidad\":3},"
                         + "{\"denominacion\":10000,\"cantidad\":3}],"
-                        + "\"montoRetirado\":0,\"baseSiguiente\":180000}");
+                        + "\"montoRetirado\":0}");
         assertThat(cierre.estado()).isEqualTo(200);
 
-        Respuesta apertura = duena.post("/api/v1/caja/sesiones", "{\"baseInicial\":180000}");
+        Respuesta apertura = duena.post("/api/v1/caja/sesiones", "{}");
         System.out.println("VERIFICACION caja de hoy abierta => " + apertura.estado());
         assertThat(apertura.estado()).isEqualTo(201);
     }

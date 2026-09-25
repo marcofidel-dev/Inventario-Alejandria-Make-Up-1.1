@@ -153,7 +153,7 @@ class CoherenciaSinCostoTest {
     void elCatalogoMarcaSinCostoExactamenteLoQueElCobroRechaza() {
         // Sin caja abierta TODO daría 409 SIN_SESION_ABIERTA y los dos conjuntos
         // saldrían vacíos: el test pasaría sin haber comparado nada.
-        duena.post("/api/v1/caja/sesiones", "{\"baseInicial\":100000}");
+        duena.post("/api/v1/caja/sesiones", "{}");
 
         List<CatalogoDto.VarianteDto> variantes = servicioCatalogo.completo().variantes();
 

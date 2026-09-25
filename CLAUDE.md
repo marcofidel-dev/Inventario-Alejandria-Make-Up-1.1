@@ -79,11 +79,17 @@ flotante.
   sistema revela esperado y diferencia. Nunca al revés. El conteo y el cierre son
   **la misma llamada**: no hay un paso previo donde el sistema pueda adelantar el
   esperado, porque no existe el endpoint que lo daría.
+- **No hay base inicial**: el efectivo esperado es `SUM(movimiento_caja.monto)` de la
+  sesión y nada más. Abrir caja no pide ni acepta ningún monto. `base_inicial` sigue
+  en la tabla como **vestigio deliberado en 0** (quitarla exige reconstruir
+  `sesion_caja` y su índice parcial): el código la fija en 0, la entidad no tiene
+  setter y ninguna API la expone. El efectivo que quede de una noche a otra se
+  declara con un INGRESO manual al abrir, "efectivo dejado de sesión anterior"; no
+  se automatiza a propósito. Ver `docs/ESPECIFICACION.md` §6.
 - **El front descarta el monto de los movimientos en el límite de la API**
-  (`api/endpoints.js`), no al pintar. El backend oculta la base inicial, pero el
-  front la conoce —él mismo la envió al abrir— y una lista que acumule los montos
-  reconstruye el esperado al centavo. Descartarlo en el límite hace que la pantalla
-  no pueda filtrarlo aunque quiera: nunca lo ve.
+  (`api/endpoints.js`), no al pintar. Sin base de por medio, el esperado *es* la suma
+  de esos montos: una lista que los acumule lo reconstruye al centavo. Descartarlo en
+  el límite hace que la pantalla no pueda filtrarlo aunque quiera: nunca lo ve.
 - **Una sesión cerrada es inmutable**: sus montos, fechas y usuarios no se modifican
   nunca. Las explicaciones se agregan como notas append-only en `nota_sesion_caja`,
   jamás editando la sesión. `sesion_caja.observaciones` quedó **en desuso** desde V6:

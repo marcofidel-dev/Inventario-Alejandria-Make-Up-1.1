@@ -114,7 +114,7 @@ class AnulacionDeVentaTest {
     @Test
     @Order(1)
     void abrirLaPrimeraCaja() {
-        Respuesta apertura = duena.post("/api/v1/caja/sesiones", "{\"baseInicial\":100000}");
+        Respuesta apertura = duena.post("/api/v1/caja/sesiones", "{}");
         assertThat(apertura.estado()).isEqualTo(201);
         idSesionUno = sesionRepository.buscarAbierta().orElseThrow().getId();
     }
@@ -244,7 +244,7 @@ class AnulacionDeVentaTest {
         // Se cierra la caja del día con esa venta adentro.
         Respuesta cierre = duena.post("/api/v1/caja/sesiones/" + idSesionUno + "/cierre",
                 "{\"conteo\":[{\"denominacion\":50000,\"cantidad\":10}],"
-                        + "\"montoRetirado\":0,\"baseSiguiente\":100000}");
+                        + "\"montoRetirado\":0}");
         assertThat(cierre.estado()).isEqualTo(200);
 
         SesionCaja cerrada = sesionRepository.findById(idSesionUno).orElseThrow();
@@ -254,7 +254,7 @@ class AnulacionDeVentaTest {
                 .findBySesionIdOrderByFechaAsc(idSesionUno).size();
 
         // Al día siguiente se abre otra caja y ahí se descubre el error.
-        Respuesta apertura = duena.post("/api/v1/caja/sesiones", "{\"baseInicial\":100000}");
+        Respuesta apertura = duena.post("/api/v1/caja/sesiones", "{}");
         assertThat(apertura.estado()).isEqualTo(201);
         idSesionDos = sesionRepository.buscarAbierta().orElseThrow().getId();
 
@@ -291,9 +291,9 @@ class AnulacionDeVentaTest {
     /**
      * El desglose por método de pago <strong>no aparece con la sesión abierta</strong>.
      *
-     * <p>No es pudor: sumado a la base inicial —que el front conoce, porque él mismo la
-     * envió al abrir— el desglose reconstruye el efectivo esperado al peso, y el cierre
-     * a ciegas deja de ser ciego. Por eso vive en {@code ArqueoDto}, que solo devuelve
+     * <p>No es pudor: el desglose por método reconstruye el efectivo esperado al peso
+     * (su renglón de EFECTIVO es casi todo el esperado), y el cierre a ciegas deja de
+     * ser ciego. Por eso vive en {@code ArqueoDto}, que solo devuelve
      * el cierre, y no como un campo de la sesión.
      */
     @Test
@@ -333,7 +333,7 @@ class AnulacionDeVentaTest {
 
         Respuesta cierre = duena.post("/api/v1/caja/sesiones/" + idSesionDos + "/cierre",
                 "{\"conteo\":[{\"denominacion\":50000,\"cantidad\":2}],"
-                        + "\"montoRetirado\":0,\"baseSiguiente\":100000}");
+                        + "\"montoRetirado\":0}");
 
         System.out.println("VERIFICACION desglose del cierre => " + cierre.cuerpo());
         assertThat(cierre.estado()).isEqualTo(200);

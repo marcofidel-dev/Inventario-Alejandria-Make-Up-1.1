@@ -172,41 +172,23 @@ function CajaOlvidada({ sesion, alCerrar }) {
 // ----------------------------------------------------------------- abrir caja
 
 /**
- * Abrir. La base viene prellenada con la que dejo el ultimo cierre, que es lo que la
- * cajera iba a escribir de todos modos.
- *
- * Si no hay cierre previo el campo queda EN BLANCO. El servidor manda 0 en ese caso,
- * y prellenar con un cero invita a aceptarlo sin mirar: es distinto "no hay base
- * anterior, decide tu" de "la base anterior fue cero".
+ * Abrir: un solo boton y ningun campo, y ese es el punto. No hay base inicial que
+ * pedir ni que sugerir: el arqueo es solo el dinero que entra y sale durante la
+ * sesion. Si de anoche quedo efectivo en el cajon, se declara despues con un
+ * movimiento "Meter plata a la caja" — una decision de quien abre, no un automatismo.
  *
  * Sin campo de observaciones: sesion_caja.observaciones quedo en desuso desde V6. Lo
  * que se escribe hoy son notas, que se agregan cuando ya hay algo que contar.
  */
 function AbrirCaja({ alAbrir }) {
-  const [base, setBase] = useState('')
-  const [origen, setOrigen] = useState(null)
   const [abriendo, setAbriendo] = useState(false)
   const [error, setError] = useState(null)
-
-  useEffect(() => {
-    let vigente = true
-    apiCaja.sugerenciaDeApertura()
-      .then((sugerencia) => {
-        if (!vigente) return
-        if (sugerencia.baseSugerida > 0) setBase(String(sugerencia.baseSugerida))
-        setOrigen(sugerencia.origen)
-      })
-      // Un 409 aqui significa que ya hay sesion abierta, y entonces esta pantalla no
-      // se esta mostrando. Nada que decir.
-      .catch(() => {})
-    return () => { vigente = false }
-  }, [])
 
   async function abrir() {
     setAbriendo(true)
     setError(null)
     try {
-      await apiCaja.abrir(Number(base) || 0)
+      await apiCaja.abrir()
       await alAbrir()
     } catch (fallo) {
       setError(fallo)
@@ -224,19 +206,10 @@ function AbrirCaja({ alAbrir }) {
 
       {error && <AvisoDeError error={error} />}
 
-      <div className="formulario formulario--angosto">
-        <Campo
-          etiqueta="Base inicial"
-          inputMode="numeric"
-          value={base}
-          onChange={(e) => setBase(e.target.value.replace(/\D/g, ''))}
-          ayuda={origen ?? undefined}
-        />
-        <div className="modal__acciones">
-          <Boton variante="principal" onClick={abrir} ocupado={abriendo} textoOcupado="Abriendo…">
-            Abrir la caja
-          </Boton>
-        </div>
+      <div className="modal__acciones">
+        <Boton variante="principal" onClick={abrir} ocupado={abriendo} textoOcupado="Abriendo…">
+          Abrir la caja
+        </Boton>
       </div>
     </div>
   )
@@ -411,12 +384,6 @@ const SESIONES_EN_LINEA = 10
  * corresponde: todas si tiene VER_SESIONES_DE_OTROS, solo las suyas si no. Filtrar
  * aqui por nombre de usuario seria mantener una segunda copia de la tabla de
  * permisos, esperando el dia en que las dos discrepen.
- *
- * LAS FILAS NO LLEVAN base_siguiente, y eso no es un olvido. El baseSiguiente de la
- * ultima sesion cerrada ES el base_inicial de la que esta en curso, porque es lo que
- * la cajera acepta al abrir. Publicarlo aqui deja calcular el efectivo esperado al
- * centavo. El backend ya lo omite mientras hay una sesion abierta; esta pantalla es
- * la segunda linea, para que la fuga no vuelva a entrar por la otra puerta.
  */
 function Historial({ sesiones }) {
   const [todas, setTodas] = useState(false)

@@ -6,9 +6,8 @@ import java.util.List;
  * Una sesión de caja vista desde la API. Tiene dos formas y no una con campos
  * nulos, y eso es el corazón del cierre a ciegas.
  *
- * <p>{@link Abierta} <strong>no tiene</strong> campo para {@code baseInicial},
- * {@code efectivoEsperado} ni ningún total: no es que vayan en null, es que no
- * existen. Un campo que existe es un campo que alguien llena "para el debug" y
+ * <p>{@link Abierta} <strong>no tiene</strong> campo para {@code efectivoEsperado}
+ * ni ningún total: no es que vayan en null, es que no existen. Un campo que existe es un campo que alguien llena "para el debug" y
  * termina en producción; un campo que no existe no se puede filtrar por descuido.
  *
  * @see com.alejandriamakeup.pos.caja.ServicioSesionCaja
@@ -52,12 +51,10 @@ public sealed interface SesionDto {
             String fechaCierre,
             String usuarioApertura,
             String usuarioCierre,
-            long baseInicial,
             Long efectivoEsperado,
             Long efectivoContado,
             Long diferencia,
             Long montoRetirado,
-            Long baseSiguiente,
             String observaciones,
 
             /**

@@ -205,8 +205,8 @@ export function compra(campos) {
 /**
  * Una sesion abierta con la forma de SesionDto.Abierta.
  *
- * NO TIENE baseInicial NI efectivoEsperado, y no es que vayan en null: el record del
- * backend no tiene esos campos. El fixture copia esa forma exacta porque si los
+ * NO TIENE efectivoEsperado, y no es que vaya en null: el record del backend no tiene
+ * ese campo. El fixture copia esa forma exacta porque si los
  * inventara, las pruebas estarian afirmando cosas sobre una API que no existe.
  */
 export function sesionAbierta(ajustes = {}) {
@@ -232,12 +232,10 @@ export function sesionCerrada(ajustes = {}) {
     fechaCierre: '2026-08-12T20:05:00',
     usuarioApertura: 'Camila',
     usuarioCierre: 'Camila',
-    baseInicial: 200000,
     efectivoEsperado: 292700,
     efectivoContado: 292700,
     diferencia: 0,
     montoRetirado: 250000,
-    baseSiguiente: null,
     observaciones: null,
     notas: [],
     ...ajustes,

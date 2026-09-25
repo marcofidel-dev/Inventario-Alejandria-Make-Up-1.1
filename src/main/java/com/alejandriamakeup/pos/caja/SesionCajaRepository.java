@@ -23,7 +23,4 @@ public interface SesionCajaRepository extends JpaRepository<SesionCaja, Long> {
     List<SesionCaja> findAllByOrderByFechaAperturaDesc();
 
     List<SesionCaja> findByUsuarioAperturaIdOrderByFechaAperturaDesc(Long usuarioId);
-
-    /** La última sesión cerrada: de ahí sale la base propuesta para abrir la siguiente. */
-    Optional<SesionCaja> findFirstByEstadoOrderByFechaCierreDesc(EstadoSesionCaja estado);
 }

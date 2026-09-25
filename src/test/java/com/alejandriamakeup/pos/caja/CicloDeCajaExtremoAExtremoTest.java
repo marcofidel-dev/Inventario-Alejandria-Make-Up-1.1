@@ -38,15 +38,16 @@ import com.alejandriamakeup.pos.usuarios.UsuarioRepository;
  * propiedad del recorrido, y un test partido en métodos independientes no la puede
  * demostrar.
  *
- * <p>Las cuentas: base 250.000, retiro de 60.000, ingreso de 35.000 → los movimientos
- * suman −25.000 y el esperado es 225.000. El conteo físico da 220.000, así que la
- * diferencia es −5.000. Ninguno de los tres números se repite ni coincide con un id,
- * una fecha o un consecutivo.
+ * <p>Las cuentas: un ingreso de apertura de 250.000 (el efectivo dejado de la noche
+ * anterior, que reemplaza a la base inicial), un retiro de 60.000 y un ingreso de
+ * 35.000 → el esperado es la suma de los movimientos, 225.000. El conteo físico da
+ * 220.000, así que la diferencia es −5.000. Ninguno de los tres números se repite ni
+ * coincide con un id, una fecha o un consecutivo.
  *
  * <p>Sobre "ningún endpoint expone montos": los montos de los <em>movimientos</em> sí
  * se exponen, por decisión explícita — la cajera necesita verificar lo que registró.
- * Lo que no puede salir es lo que permite deducir el arqueo: la base inicial, el
- * esperado, o cualquier total.
+ * Lo que no puede salir es lo que permite deducir el arqueo: el esperado, o cualquier
+ * total.
  */
 @SpringBootTest(classes = PosApplication.class, webEnvironment = WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -54,10 +55,10 @@ class CicloDeCajaExtremoAExtremoTest {
 
     private static final String URL = BaseDatosAislada.urlNueva("ciclo-extremo-a-extremo");
 
-    private static final long BASE = 250_000;
+    private static final long EFECTIVO_DE_AYER = 250_000;
     private static final long RETIRO = 60_000;
     private static final long INGRESO = 35_000;
-    private static final long ESPERADO = BASE - RETIRO + INGRESO;   // 225.000
+    private static final long ESPERADO = EFECTIVO_DE_AYER - RETIRO + INGRESO;   // 225.000
     private static final long CONTADO = 220_000;
     private static final long DIFERENCIA = CONTADO - ESPERADO;      // −5.000
 
@@ -96,13 +97,18 @@ class CicloDeCajaExtremoAExtremoTest {
     @Test
     void unDiaDeCajaDePrincipioAFin() {
         // ── 1. Abrir ──────────────────────────────────────────────────────────
-        Respuesta apertura = cajera.post("/api/v1/caja/sesiones",
-                "{\"baseInicial\":" + BASE + ",\"observaciones\":\"apertura\"}");
-        System.out.println("PASO 1  abrir con base " + BASE + " => " + apertura.estado()
-                + " " + apertura.cuerpo());
+        Respuesta apertura = cajera.post("/api/v1/caja/sesiones", "{}");
+        System.out.println("PASO 1  abrir => " + apertura.estado() + " " + apertura.cuerpo());
         assertThat(apertura.estado()).isEqualTo(201);
         assertThat(apertura.cuerpo()).contains("\"estado\":\"ABIERTA\"");
         long id = extraerId(apertura.cuerpo());
+
+        // El efectivo que quedó del día anterior se declara con un ingreso manual, que
+        // es el reemplazo de la base inicial.
+        Respuesta dejadoDeAyer = cajera.post("/api/v1/caja/movimientos",
+                "{\"tipo\":\"INGRESO\",\"monto\":" + EFECTIVO_DE_AYER
+                        + ",\"concepto\":\"efectivo dejado de sesión anterior\"}");
+        assertThat(dejadoDeAyer.estado()).isEqualTo(201);
 
         // ── 2. Un retiro y un ingreso ─────────────────────────────────────────
         Respuesta retiro = cajera.post("/api/v1/caja/movimientos",
@@ -123,8 +129,8 @@ class CicloDeCajaExtremoAExtremoTest {
         for (String ruta : rutas) {
             String cuerpo = cajera.get(ruta).cuerpo();
             cuerpo = cuerpo == null ? "" : cuerpo;
-            for (String prohibido : List.of(String.valueOf(BASE), String.valueOf(ESPERADO),
-                    "baseInicial", "efectivoEsperado", "efectivoContado", "diferencia")) {
+            for (String prohibido : List.of(String.valueOf(ESPERADO),
+                    "efectivoEsperado", "efectivoContado", "diferencia")) {
                 if (cuerpo.contains(prohibido)) {
                     fugas.add(ruta + " expone '" + prohibido + "'");
                 }
@@ -145,7 +151,6 @@ class CicloDeCajaExtremoAExtremoTest {
                 {"conteo":[{"denominacion":100000,"cantidad":2},
                            {"denominacion":20000,"cantidad":1}],
                  "montoRetirado":100000,
-                 "baseSiguiente":120000,
                  "observaciones":"cierre del día"}
                 """);
         System.out.println("PASO 4  conteo enviado (2×100.000 + 1×20.000 = " + CONTADO + ") => "
@@ -164,13 +169,12 @@ class CicloDeCajaExtremoAExtremoTest {
                 .contains("\"efectivoEsperado\":" + ESPERADO)
                 .contains("\"efectivoContado\":" + CONTADO)
                 .contains("\"diferencia\":" + DIFERENCIA)
-                .contains("\"montoRetirado\":100000")
-                .contains("\"baseSiguiente\":120000");
+                .contains("\"montoRetirado\":100000");
 
         // ── 6. Cerrada es inmutable ───────────────────────────────────────────
         Respuesta segundoCierre = cajera.post("/api/v1/caja/sesiones/" + id + "/cierre",
                 "{\"conteo\":[{\"denominacion\":1000,\"cantidad\":1}],"
-                        + "\"montoRetirado\":0,\"baseSiguiente\":0}");
+                        + "\"montoRetirado\":0}");
         Respuesta movimientoTardio = cajera.post("/api/v1/caja/movimientos",
                 "{\"tipo\":\"INGRESO\",\"monto\":1000,\"concepto\":\"después del cierre\"}");
         System.out.println("PASO 6  segundo cierre => " + segundoCierre.estado()

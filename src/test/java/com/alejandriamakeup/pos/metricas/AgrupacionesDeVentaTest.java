@@ -131,7 +131,7 @@ class AgrupacionesDeVentaTest {
 
         ClienteHttpDePrueba duena = new ClienteHttpDePrueba(puerto);
         duena.post("/api/v1/auth/login", "{\"nombre\":\"Alejandra\",\"pin\":\"1111\"}");
-        duena.post("/api/v1/caja/sesiones", "{\"baseInicial\":100000}");
+        duena.post("/api/v1/caja/sesiones", "{}");
 
         // 20.000 en efectivo, 10.000 en efectivo, y 30.000 con 5.000 de descuento en
         // tarjeta. El descuento está ahí a propósito: es donde las dos fórmulas se

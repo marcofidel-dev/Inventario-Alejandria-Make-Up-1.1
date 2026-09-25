@@ -116,12 +116,11 @@ export const ventas = {
 /**
  * Quita el monto de un movimiento de caja. LA LINEA MAS IMPORTANTE DE ESTE ARCHIVO.
  *
- * Con la sesion ABIERTA, base inicial + suma de movimientos ES el efectivo esperado.
- * El backend se cuida de no publicar la base —SesionDto.Abierta ni siquiera tiene
- * campo donde ponerla— pero el front SI la conoce: el mismo la escribio al abrir la
- * caja. Una lista que acumule los montos reconstruye al centavo el numero que el
- * cierre a ciegas existe para ocultar, y quien cuenta sabiendo el resultado esperado
- * cuenta hasta que le cuadre.
+ * Con la sesion ABIERTA, la suma de los movimientos ES el efectivo esperado: no hay
+ * base inicial que la complete. El backend no lo publica —SesionDto.Abierta ni
+ * siquiera tiene campo donde ponerlo— pero una lista que acumule los montos
+ * reconstruye al centavo el numero que el cierre a ciegas existe para ocultar, y
+ * quien cuenta sabiendo el resultado esperado cuenta hasta que le cuadre.
  *
  * Se descarta AQUI, en el limite, y no al pintar. Asi la pantalla no puede filtrarlo
  * aunque quiera, porque nunca lo ve. Si en cambio se dejara pasar y se omitiera en el
@@ -134,10 +133,11 @@ export const caja = {
   /** Da 404 cuando no hay ninguna sesion abierta, que no es un error sino un estado. */
   sesionActual: () => api.get('/api/v1/caja/sesiones/actual'),
 
-  /** Da 409 cuando ya hay una sesion abierta: entonces no hay base que sugerir. */
-  sugerenciaDeApertura: () => api.get('/api/v1/caja/sesiones/sugerencia-apertura'),
-
-  abrir: (baseInicial) => api.post('/api/v1/caja/sesiones', { baseInicial }),
+  /**
+   * Abrir no lleva cuerpo: no hay base inicial ni nada que declarar. Si de anoche quedo
+   * efectivo en el cajon, se declara despues con un movimiento INGRESO.
+   */
+  abrir: () => api.post('/api/v1/caja/sesiones'),
 
   /** El historial ya viene filtrado por permiso: la EMPLEADA solo recibe las suyas. */
   listar: () => api.get('/api/v1/caja/sesiones'),

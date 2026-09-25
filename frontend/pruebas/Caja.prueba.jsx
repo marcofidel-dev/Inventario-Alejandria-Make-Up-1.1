@@ -32,7 +32,6 @@ function montar({
   sesion = SESION,
   movimientos = [],
   historial,
-  sugerencia = { baseSugerida: 263000, origen: 'Base dejada por la sesión C-000041' },
   alCerrar,
   alAbrir,
 } = {}) {
@@ -42,8 +41,6 @@ function montar({
     '/api/v1/caja/sesiones/actual': () => (sesion
       ? { cuerpo: sesion }
       : { estado: 404, cuerpo: { codigo: 'NO_ENCONTRADO', error: 'No hay ninguna sesión.' } }),
-
-    '/api/v1/caja/sesiones/sugerencia-apertura': { cuerpo: sugerencia },
 
     [`/api/v1/caja/sesiones/${sesion?.id ?? 0}/movimientos`]: () => ({ cuerpo: registrados }),
 
@@ -122,10 +119,10 @@ describe('el monto no llega a la pantalla', () => {
 
 describe('la caja con la sesión abierta', () => {
   /**
-   * LA PRUEBA DEL PUNTO 1. Base inicial + suma de movimientos ES el efectivo
-   * esperado. El front conoce la base porque el mismo la envio al abrir, asi que una
-   * lista que muestre los montos —o que los guarde para mostrarlos— reconstruye al
-   * centavo el numero que el cierre a ciegas existe para ocultar.
+   * LA PRUEBA DEL PUNTO 1. La suma de movimientos ES el efectivo esperado, sin base
+   * inicial de por medio. Una lista que muestre los montos —o que los guarde para
+   * mostrarlos— reconstruye al centavo el numero que el cierre a ciegas existe para
+   * ocultar.
    */
   it('ningún importe de los movimientos registrados queda en la pantalla', async () => {
     const usuario = userEvent.setup()
@@ -169,21 +166,6 @@ describe('la caja con la sesión abierta', () => {
 })
 
 describe('el historial', () => {
-  /**
-   * La fuga que destapo CierreACiegasTest, entrando por la pantalla en vez de por el
-   * endpoint: el baseSiguiente de la ultima sesion cerrada ES el base_inicial de la
-   * que esta en curso. El fixture lo trae poblado a proposito, simulando un backend
-   * que dejara de omitirlo.
-   */
-  it('no muestra la base siguiente de una sesión cerrada', async () => {
-    const cerrada = sesionCerrada({ baseSiguiente: 263000 })
-    montar({ historial: [SESION, cerrada] })
-
-    expect(await screen.findByText('C-000041')).toBeInTheDocument()
-    expect(todoLoVisible()).not.toContain('263.000')
-    expect(todoLoVisible()).not.toContain('263000')
-  })
-
   it('se corta en diez sesiones y ofrece ver todas', async () => {
     const muchas = Array.from({ length: 14 }, (unused, indice) => sesionCerrada({
       id: 100 + indice,
@@ -244,25 +226,33 @@ describe('la caja olvidada de un día anterior', () => {
 })
 
 describe('sin caja abierta', () => {
-  it('lo primero es abrirla, con la base que dejó el último cierre', async () => {
-    montar({ sesion: null, historial: [] })
+  /**
+   * Abrir es un boton y nada mas: no hay base inicial que pedir ni que sugerir. Lo
+   * que se afirma es la AUSENCIA de todo campo y de toda llamada de sugerencia.
+   */
+  it('lo primero es abrirla, con un solo botón y ningún campo', async () => {
+    const espia = montar({ sesion: null, historial: [] })
 
     expect(await screen.findByRole('heading', { name: 'Abrir la caja' })).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByLabelText('Base inicial')).toHaveValue('263000'))
-    expect(screen.getByText('Base dejada por la sesión C-000041')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Abrir la caja' })).toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(todoLoVisible()).not.toMatch(/base/i)
+    expect(espia.mock.calls.some(([ruta]) => ruta.includes('sugerencia'))).toBe(false)
   })
 
-  it('deja la base en blanco cuando no hay cierre previo', async () => {
-    montar({
-      sesion: null,
-      historial: [],
-      sugerencia: { baseSugerida: 0, origen: 'No hay sesiones cerradas previas' },
-    })
+  it('abre enviando una petición sin cuerpo', async () => {
+    const usuario = userEvent.setup()
+    const espia = montar({ sesion: null, historial: [] })
 
-    expect(await screen.findByRole('heading', { name: 'Abrir la caja' })).toBeInTheDocument()
-    await waitFor(() =>
-      expect(screen.getByText('No hay sesiones cerradas previas')).toBeInTheDocument())
-    expect(screen.getByLabelText('Base inicial')).toHaveValue('')
+    await usuario.click(await screen.findByRole('button', { name: 'Abrir la caja' }))
+
+    await waitFor(() => expect(
+      espia.mock.calls.some(([ruta, opciones]) =>
+        ruta === '/api/v1/caja/sesiones' && opciones?.method === 'POST'),
+    ).toBe(true))
+    const [, apertura] = espia.mock.calls.find(([ruta, opciones]) =>
+      ruta === '/api/v1/caja/sesiones' && opciones?.method === 'POST')
+    expect(apertura.body).toBeUndefined()
   })
 })
 
@@ -340,6 +330,28 @@ describe('el cierre', () => {
 
     resolver({ cuerpo: arqueo() })
     expect(await screen.findByText('292.700')).toBeInTheDocument()
+  })
+
+  /**
+   * Sin sugerencia de base no hay "base para mañana": el cierre pide el conteo y lo
+   * que se retira, y nada mas. El efectivo que se deje en el cajon se declara al abrir
+   * la sesion siguiente, con un ingreso.
+   */
+  it('el cierre no pide ni envía una base para mañana', async () => {
+    const usuario = userEvent.setup()
+    const espia = montar()
+    await llegarAlConteo(usuario)
+    await contar(usuario, { '100.000': 2 })
+    await usuario.click(screen.getByRole('button', { name: 'Continuar' }))
+
+    expect(screen.getByLabelText('Monto que se retira')).toBeInTheDocument()
+    expect(screen.queryByLabelText(/Base/i)).not.toBeInTheDocument()
+
+    await usuario.click(screen.getByRole('button', { name: 'Cerrar la caja' }))
+    await screen.findByText('292.700')
+
+    const [, cierre] = espia.mock.calls.find(([ruta]) => ruta.endsWith('/cierre'))
+    expect(Object.keys(JSON.parse(cierre.body)).sort()).toEqual(['conteo', 'montoRetirado'])
   })
 
   it('distingue faltante de sobrante y no lo presenta como un error', async () => {

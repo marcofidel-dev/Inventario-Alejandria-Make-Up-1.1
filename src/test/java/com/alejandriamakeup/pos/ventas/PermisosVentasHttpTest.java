@@ -111,7 +111,7 @@ class PermisosVentasHttpTest {
     @Test
     @Order(1)
     void laEmpleadaAbreCajaYVende() {
-        Respuesta apertura = empleada.post("/api/v1/caja/sesiones", "{\"baseInicial\":100000}");
+        Respuesta apertura = empleada.post("/api/v1/caja/sesiones", "{}");
         assertThat(apertura.estado()).isEqualTo(201);
 
         Respuesta venta = empleada.post("/api/v1/ventas",

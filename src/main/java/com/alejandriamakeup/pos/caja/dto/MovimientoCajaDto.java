@@ -8,13 +8,12 @@ import com.alejandriamakeup.pos.caja.TipoMovimientoCaja;
  *
  * <p>El monto sí se muestra, con su signo: la cajera necesita verificar lo que
  * registró. Lo que nunca acompaña a una lista de movimientos de sesión abierta es
- * un <strong>total</strong>, porque sumado a la base inicial sería el efectivo
- * esperado.
+ * un <strong>total</strong>, porque ese total es el efectivo esperado: sin base
+ * inicial, el esperado es exactamente la suma de los montos.
  *
  * <p>Con la sesión abierta, el front descarta el monto en el límite de la API
- * —{@code api/endpoints.js}— antes de que ninguna pantalla lo vea: él sí conoce la
- * base, porque él mismo la envió al abrir, y una lista que acumule los montos
- * reconstruye el esperado que el cierre a ciegas oculta.
+ * —{@code api/endpoints.js}— antes de que ninguna pantalla lo vea: una lista que
+ * acumule los montos reconstruye el esperado que el cierre a ciegas oculta.
  *
  * <p><strong>Ojo con {@link #de}:</strong> lee {@code usuario.nombre}, que es una
  * asociación LAZY. Con {@code open-in-view: false} hay que llamarla dentro de la

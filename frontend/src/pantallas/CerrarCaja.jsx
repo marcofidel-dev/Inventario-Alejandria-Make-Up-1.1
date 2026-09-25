@@ -56,7 +56,6 @@ export function CerrarCaja({ sesion, alTerminar, alCancelar }) {
   const [paso, setPaso] = useState('contar')
   const [conteo, setConteo] = useState({})
   const [montoRetirado, setMontoRetirado] = useState('')
-  const [baseSiguiente, setBaseSiguiente] = useState('')
   const [arqueo, setArqueo] = useState(null)
   const [cerrando, setCerrando] = useState(false)
   const [error, setError] = useState(null)
@@ -81,7 +80,6 @@ export function CerrarCaja({ sesion, alTerminar, alCancelar }) {
       setArqueo(await apiCaja.cerrar(sesion.id, {
         conteo: conteoParaEnviar(conteo),
         montoRetirado: Number(montoRetirado) || 0,
-        baseSiguiente: Number(baseSiguiente) || 0,
       }))
       setPaso('revelado')
     } catch (fallo) {
@@ -148,13 +146,6 @@ export function CerrarCaja({ sesion, alTerminar, alCancelar }) {
               value={montoRetirado}
               onChange={(e) => setMontoRetirado(e.target.value.replace(/\D/g, ''))}
               ayuda="Lo que sale del cajón para consignar o guardar."
-            />
-            <Campo
-              etiqueta="Base para mañana"
-              inputMode="numeric"
-              value={baseSiguiente}
-              onChange={(e) => setBaseSiguiente(e.target.value.replace(/\D/g, ''))}
-              ayuda="Lo que queda en el cajón. Mañana se propone esta misma cifra al abrir."
             />
           </div>
 

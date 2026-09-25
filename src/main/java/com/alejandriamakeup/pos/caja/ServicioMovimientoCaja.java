@@ -18,7 +18,7 @@ import com.alejandriamakeup.pos.web.ErrorDeAplicacion;
  * Movimientos del cajón. Append-only: aquí solo se agrega.
  *
  * <p>El efectivo esperado <strong>nunca</strong> se guarda acumulado en ninguna
- * parte: se calcula con {@code base_inicial + SUM(monto)} cada vez que hace falta,
+ * parte: se calcula con {@code SUM(monto)} cada vez que hace falta,
  * igual que el stock es la suma del ledger de inventario.
  */
 @Service
@@ -123,7 +123,7 @@ public class ServicioMovimientoCaja {
         return movimientoRepository.findBySesionIdOrderByFechaAsc(sesionId);
     }
 
-    /** La suma con signo de los movimientos. Sin la base inicial: eso lo suma el cierre. */
+    /** La suma con signo de los movimientos: es el efectivo esperado, sin más sumandos. */
     public long sumaDe(long sesionId) {
         return movimientoRepository.sumaDe(sesionId);
     }

@@ -141,7 +141,7 @@ class ReciboDeVentaHttpTest {
                 "{\"nombre\":\"Alejandria Make Up\",\"nit\":\"1.234.567.890-1\","
                         + "\"direccion\":\"Cra 10 # 15-30, Puerto Gaitán\","
                         + "\"telefono\":\"300 123 4567\",\"pieRecibo\":\"Gracias por su compra\"}");
-        duena.post("/api/v1/caja/sesiones", "{\"baseInicial\":100000}");
+        duena.post("/api/v1/caja/sesiones", "{}");
 
         Respuesta respuesta = duena.post("/api/v1/ventas",
                 "{\"uuid\":\"" + UUID.randomUUID() + "\",\"metodoPago\":\"EFECTIVO\","

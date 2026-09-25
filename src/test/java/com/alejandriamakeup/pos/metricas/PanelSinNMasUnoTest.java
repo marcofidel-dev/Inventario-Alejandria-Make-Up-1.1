@@ -112,7 +112,7 @@ class PanelSinNMasUnoTest {
     @Test
     void elNumeroDeConsultasNoCreceConElNegocio() {
         idDuena = crearDuena();
-        servicioSesionCaja.abrir(100_000, null, idDuena);
+        servicioSesionCaja.abrir(idDuena);
 
         venderVariantesNuevas(5);
         long conCinco = sentenciasDeUnPanel();

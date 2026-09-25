@@ -61,7 +61,6 @@ public class ReglasDeAcceso {
         // Las rutas literales van antes que las de variable: se resuelve por
         // especificidad, pero declararlas en este orden lo deja explícito.
         requiere(HttpMethod.GET, "/api/v1/caja/sesiones/actual", Permiso.OPERAR_CAJA);
-        requiere(HttpMethod.GET, "/api/v1/caja/sesiones/sugerencia-apertura", Permiso.OPERAR_CAJA);
         requiere(HttpMethod.GET, "/api/v1/caja/sesiones", Permiso.OPERAR_CAJA);
         requiere(HttpMethod.POST, "/api/v1/caja/sesiones", Permiso.OPERAR_CAJA);
         requiere(HttpMethod.GET, "/api/v1/caja/sesiones/{id}", Permiso.OPERAR_CAJA);

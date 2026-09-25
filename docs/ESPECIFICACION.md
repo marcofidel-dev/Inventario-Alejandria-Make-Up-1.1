@@ -89,7 +89,7 @@ spring:
 
 **Caja**
 
-11. `SesionCaja` — consecutivo, usuario y fecha de apertura, `base_inicial`, usuario y fecha de cierre, `efectivo_contado`, `efectivo_esperado`, `diferencia`, estado (`ABIERTA` / `CERRADA`), observaciones
+11. `SesionCaja` — consecutivo, usuario y fecha de apertura, `base_inicial` (vestigio, siempre 0: ver §6 "Reemplazo de la base inicial"), usuario y fecha de cierre, `efectivo_contado`, `efectivo_esperado`, `diferencia`, estado (`ABIERTA` / `CERRADA`), observaciones
 12. `MovimientoCaja` — **append-only**. `sesion_id`, tipo (`VENTA_EFECTIVO` / `RETIRO` / `INGRESO` / `GASTO` / `DEVOLUCION`), monto con signo, `venta_id` si aplica, concepto, fecha
 13. `ConteoDenominacion` — `sesion_id`, denominación y cantidad. El conteo del cierre a ciegas, billete por billete, en vez de un total suelto.
 
@@ -136,14 +136,21 @@ spring:
 - Consecutivo sin huecos, vía tabla `Consecutivo`.
 
 **Caja**
-- Efectivo esperado = `base_inicial + SUM(movimientos)`.
+- Efectivo esperado = `SUM(movimiento_caja.monto)` de la sesión. **Sin sumando de base**: el arqueo es exclusivamente el dinero que entró y salió durante la sesión.
 - **Cierre a ciegas:** primero se ingresa el conteo físico, y solo entonces el sistema revela esperado, contado y diferencia. Nunca al revés.
 - Solo el efectivo toca el cajón. Datáfono, Nequi, Daviplata y transferencias entran en la sesión pero se concilian aparte. El cierre muestra desglose por método.
 - Al cerrar se congelan `efectivo_esperado` y `diferencia`. Una sesión cerrada es inmutable.
 - Una sola sesión abierta a la vez. Si al abrir existe una de un día anterior, se fuerza su cierre con la fecha real.
 - Una devolución sobre una venta de sesión cerrada golpea la **sesión actual**, nunca la histórica.
-- El cierre registra cuánto se retira y cuánto queda como base del día siguiente.
+- El cierre registra cuánto se retira (`monto_retirado`). No calcula ni sugiere una base para el día siguiente: ese concepto no existe.
 - Conteo por denominación ($100.000, $50.000, $20.000, $10.000, $5.000, $2.000, $1.000 y monedas) en vez de un total suelto.
+
+**Reemplazo de la base inicial**
+- **Abrir caja no pide ni acepta ningún monto.** `POST /caja/sesiones` va sin cuerpo y la sesión nace con el cajón en cero para el sistema. No existe la sugerencia de apertura ni el campo "base para mañana" al cerrar.
+- **Si queda efectivo físico de una noche para otra** (vueltos guardados, por ejemplo), se declara con un movimiento **INGRESO** manual al abrir la sesión nueva, con concepto explícito: *"efectivo dejado de sesión anterior"*. Es el reemplazo formal de la base inicial y no se construyó nada nuevo para él: es el endpoint de movimientos de siempre.
+- **Por qué no se automatiza.** Declararlo es una decisión consciente de quien abre —cuánto hay de verdad en el cajón esta mañana—, y queda en el historial como cualquier otro ingreso, con autor y hora. Un arrastre automático haría que el esperado de hoy dependiera de un número que nadie miró. Olvidarlo tiene un costo visible: la diferencia del cierre sale como sobrante por ese monto.
+- **Por qué `sesion_caja.base_inicial` sigue en la tabla.** Es un vestigio deliberado, no una decisión a medias: la columna es `NOT NULL` y quitarla exige reconstruir `sesion_caja` y su índice parcial de sesión única abierta (SQLite no permite `DROP COLUMN` sobre lo que está en un índice o una FK). El código la fija **siempre** en 0 al crear la sesión, la entidad no tiene setter para ella y ninguna API la recibe ni la devuelve. `base_siguiente` quedó igual: nullable, sin escribirse, en NULL desde este cambio.
+- **Sesiones anteriores al cambio.** Las cerradas conservan la `base_inicial` con que se abrieron y su `efectivo_esperado` congelado *sí* la incluye, así que en ellas esperado ≠ suma de sus movimientos. Son inmutables y no se recalculan. Una sesión que estuviera **abierta** al actualizar cerraría sin esa base: hay que cerrarla antes de instalar la versión nueva.
 
 ---
 

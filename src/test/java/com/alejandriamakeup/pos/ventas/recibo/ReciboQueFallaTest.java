@@ -119,7 +119,7 @@ class ReciboQueFallaTest {
         when(generador.generar(any(), any()))
                 .thenThrow(new UncheckedIOException(new IOException("No space left on device")));
 
-        duena.post("/api/v1/caja/sesiones", "{\"baseInicial\":100000}");
+        duena.post("/api/v1/caja/sesiones", "{}");
         long stockAntes = movimientoRepository.stockDe(idLabial);
 
         Respuesta respuesta = duena.post("/api/v1/ventas",

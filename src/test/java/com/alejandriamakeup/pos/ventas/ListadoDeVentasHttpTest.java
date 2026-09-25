@@ -106,7 +106,7 @@ class ListadoDeVentasHttpTest {
     @Test
     @Order(1)
     void sinFechaSonLasDeHoyYSinCostosNiLineas() {
-        duena.post("/api/v1/caja/sesiones", "{\"baseInicial\":100000}");
+        duena.post("/api/v1/caja/sesiones", "{}");
         cobrar("EFECTIVO", 50_000L);
         cobrar("NEQUI", null);
 

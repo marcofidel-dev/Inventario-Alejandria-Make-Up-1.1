@@ -83,7 +83,6 @@ class MovimientoDeVentaTest {
             nueva.setConsecutivo("S-" + UUID.randomUUID());
             nueva.setUsuarioApertura(usuario);
             nueva.setFechaApertura(Fechas.ahora());
-            nueva.setBaseInicial(100_000);
             nueva.setEstado(EstadoSesionCaja.ABIERTA);
             return sesionRepository.save(nueva);
         });
@@ -122,21 +121,25 @@ class MovimientoDeVentaTest {
         }
     }
 
-    /** Y el efecto que importa: el esperado no se infla con las ventas digitales. */
+    /**
+     * Y el efecto que importa: el esperado no se infla con las ventas digitales. La
+     * suma de movimientos ES el esperado — el cierre de punta a punta se prueba en
+     * {@code EfectivoEsperadoSinBaseTest}.
+     */
     @Test
-    void elEfectivoEsperadoSoloCuentaLoQueEntroEnEfectivo() {
+    void laSumaDeMovimientosSoloCuentaLoQueEntroEnEfectivo() {
+        long antes = servicioMovimiento.sumaDe(sesion.getId());
+
         servicioMovimiento.registrarVenta(guardarVenta(MetodoPago.EFECTIVO, 30_000));
         servicioMovimiento.registrarVenta(guardarVenta(MetodoPago.NEQUI, 500_000));
         servicioMovimiento.registrarVenta(guardarVenta(MetodoPago.TARJETA, 400_000));
         servicioMovimiento.registrarVenta(guardarVenta(MetodoPago.EFECTIVO, 20_000));
 
-        long suma = servicioMovimiento.sumaDe(sesion.getId());
-        long esperado = sesion.getBaseInicial() + suma;
+        long suma = servicioMovimiento.sumaDe(sesion.getId()) - antes;
 
         System.out.println("VERIFICACION 30000 y 20000 en efectivo, 900000 en digital => "
-                + "suma de movimientos " + suma + ", esperado en cajón " + esperado);
+                + "suma de movimientos " + suma);
         assertThat(suma).isEqualTo(50_000);
-        assertThat(esperado).isEqualTo(150_000);
     }
 
     private Venta guardarVenta(MetodoPago metodo, long total) {

@@ -76,7 +76,6 @@ describe('ningún identificador de código llega a la pantalla', () => {
     const sesion = sesionAbierta()
     vi.stubGlobal('fetch', fetchFalso({
       '/api/v1/caja/sesiones/actual': { cuerpo: sesion },
-      '/api/v1/caja/sesiones/sugerencia-apertura': { estado: 409, cuerpo: { codigo: 'CONFLICTO', error: 'Ya hay una sesión abierta.' } },
       [`/api/v1/caja/sesiones/${sesion.id}/movimientos`]: {
         cuerpo: [
           movimientoDePrueba({ id: 1, tipo: 'VENTA_EFECTIVO', concepto: 'Venta V-000123' }),

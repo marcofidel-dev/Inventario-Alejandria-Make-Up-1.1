@@ -170,7 +170,7 @@ class FugaDeCostosTest {
         // ella, GET /api/v1/ventas/{id} respondería 404 en el barrido y la ruta
         // pasaría el test sin haber enseñado nunca un cuerpo.
         if (idVenta == null) {
-            duena.post("/api/v1/caja/sesiones", "{\"baseInicial\":100000}");
+            duena.post("/api/v1/caja/sesiones", "{}");
             Respuesta venta = duena.post("/api/v1/ventas",
                     // Sin la palabra "costo" en el uuid: viaja en el cuerpo de la
                     // respuesta y el barrido lo leería como una fuga.

@@ -20,7 +20,6 @@ import com.alejandriamakeup.pos.caja.dto.CerrarSesionPeticion;
 import com.alejandriamakeup.pos.caja.dto.MovimientoCajaDto;
 import com.alejandriamakeup.pos.caja.dto.NotaSesionCajaDto;
 import com.alejandriamakeup.pos.caja.dto.SesionDto;
-import com.alejandriamakeup.pos.caja.dto.SugerenciaAperturaDto;
 import com.alejandriamakeup.pos.config.Fechas;
 import com.alejandriamakeup.pos.consecutivos.ServicioConsecutivo;
 import com.alejandriamakeup.pos.consecutivos.TipoConsecutivo;
@@ -81,9 +80,14 @@ public class ServicioSesionCaja {
      * Abre una sesión. Falla si ya hay una abierta, y el mensaje distingue el caso
      * de la sesión olvidada de un día anterior: ahí lo que hay que hacer no es
      * insistir, es cerrar la de ayer.
+     *
+     * <p>No recibe ningún monto: no hay base inicial, la sesión nace con el cajón en
+     * cero para el sistema. Si de una noche a otra quedó efectivo físico, quien abre lo
+     * declara con un movimiento INGRESO manual — ver "Reemplazo de la base inicial" en
+     * la especificación.
      */
     @Transactional
-    public SesionDto abrir(long baseInicial, String observaciones, long usuarioId) {
+    public SesionDto abrir(long usuarioId) {
         sesionRepository.buscarAbierta().ifPresent(abierta -> {
             throw esDeUnDiaAnterior(abierta)
                     ? ErrorDeAplicacion.conflicto("SESION_ABIERTA_DE_DIA_ANTERIOR",
@@ -100,30 +104,11 @@ public class ServicioSesionCaja {
         sesion.setConsecutivo(servicioConsecutivo.siguiente(TipoConsecutivo.SESION_CAJA));
         sesion.setUsuarioApertura(usuario);
         sesion.setFechaApertura(Fechas.ahora());
-        sesion.setBaseInicial(baseInicial);
         sesion.setEstado(EstadoSesionCaja.ABIERTA);
-        sesion.setObservaciones(observaciones);
 
         SesionCaja guardada = sesionRepository.save(sesion);
         log.info("Sesión de caja {} abierta por {}", guardada.getConsecutivo(), usuario.getNombre());
         return aDto(guardada);
-    }
-
-    /**
-     * La base propuesta para abrir. Responde 409 si ya hay una sesión abierta: ver
-     * {@link SugerenciaAperturaDto} para por qué eso no es un detalle.
-     */
-    public SugerenciaAperturaDto sugerenciaDeApertura() {
-        if (sesionRepository.buscarAbierta().isPresent()) {
-            throw ErrorDeAplicacion.conflicto("SESION_YA_ABIERTA",
-                    "Ya hay una sesión abierta: no hay base que sugerir.");
-        }
-
-        return sesionRepository.findFirstByEstadoOrderByFechaCierreDesc(EstadoSesionCaja.CERRADA)
-                .filter(ultima -> ultima.getBaseSiguiente() != null)
-                .map(ultima -> new SugerenciaAperturaDto(ultima.getBaseSiguiente(),
-                        "Base dejada por la sesión " + ultima.getConsecutivo()))
-                .orElseGet(() -> new SugerenciaAperturaDto(0L, "No hay sesiones cerradas previas"));
     }
 
     // --------------------------------------------------------------- consultar
@@ -169,7 +154,7 @@ public class ServicioSesionCaja {
         return sesionRepository.buscarAbierta().filter(this::esDeUnDiaAnterior).isPresent();
     }
 
-    /** La sesión abierta, si hay. Sin base inicial, sin esperado, sin totales. */
+    /** La sesión abierta, si hay. Sin esperado, sin totales. */
     public SesionDto actual() {
         return aDto(sesionRepository.buscarAbierta().orElseThrow(() ->
                 ErrorDeAplicacion.noEncontrado("No hay ninguna sesión de caja abierta.")));
@@ -191,10 +176,9 @@ public class ServicioSesionCaja {
 
         // Una sola consulta para todo el listado, no una por fila. Lo mismo con las
         // notas: al año son unas trescientas sesiones y el listado se pinta entero.
-        boolean hayAbierta = sesionRepository.buscarAbierta().isPresent();
         Map<Long, List<NotaSesionCajaDto>> notas = notasDe(sesiones.stream().map(SesionCaja::getId).toList());
 
-        return sesiones.stream().map(sesion -> aDto(sesion, hayAbierta, notas)).toList();
+        return sesiones.stream().map(sesion -> aDto(sesion, notas)).toList();
     }
 
     /**
@@ -274,7 +258,8 @@ public class ServicioSesionCaja {
         }
 
         long contado = totalDelConteo(peticion.conteo());
-        long esperado = sesion.getBaseInicial() + movimientoRepository.sumaDe(sesion.getId());
+        // Solo lo que entró y salió durante la sesión: no hay sumando de base.
+        long esperado = movimientoRepository.sumaDe(sesion.getId());
 
         guardarConteo(sesion, peticion.conteo());
 
@@ -282,7 +267,6 @@ public class ServicioSesionCaja {
         sesion.setEfectivoEsperado(esperado);
         sesion.setDiferencia(contado - esperado);
         sesion.setMontoRetirado(peticion.montoRetirado());
-        sesion.setBaseSiguiente(peticion.baseSiguiente());
         sesion.setUsuarioCierre(usuario(usuarioId));
         sesion.setFechaCierre(Fechas.ahora());
         sesion.setEstado(EstadoSesionCaja.CERRADA);
@@ -364,8 +348,7 @@ public class ServicioSesionCaja {
     }
 
     private SesionDto aDto(SesionCaja sesion) {
-        return aDto(sesion, sesionRepository.buscarAbierta().isPresent(),
-                notasDe(List.of(sesion.getId())));
+        return aDto(sesion, notasDe(List.of(sesion.getId())));
     }
 
     /** Las notas de varias sesiones, agrupadas por sesión. Una consulta, no una por fila. */
@@ -378,23 +361,7 @@ public class ServicioSesionCaja {
                         Collectors.mapping(NotaSesionCajaDto::de, Collectors.toList())));
     }
 
-    /**
-     * Con una sesión abierta, el {@code baseSiguiente} de las sesiones cerradas se
-     * omite.
-     *
-     * <p>Esto lo destapó el barrido de {@code CierreACiegasTest} y es la misma fuga
-     * que la de la sugerencia de apertura, entrando por otra puerta: el
-     * {@code baseSiguiente} de la última sesión cerrada <strong>es</strong> el
-     * {@code base_inicial} de la que está en curso cuando la cajera acepta la base
-     * propuesta. Publicarlo en el historial, junto con la lista de movimientos que sí
-     * muestra montos, permite calcular el efectivo esperado al centavo y el arqueo a
-     * ciegas deja de ser ciego.
-     *
-     * <p>Cerrada la caja del día, el dato vuelve a aparecer: ya no hay nada que
-     * proteger.
-     */
-    private SesionDto aDto(SesionCaja sesion, boolean hayUnaSesionAbierta,
-                           Map<Long, List<NotaSesionCajaDto>> notas) {
+    private SesionDto aDto(SesionCaja sesion, Map<Long, List<NotaSesionCajaDto>> notas) {
         if (sesion.getEstado() == EstadoSesionCaja.ABIERTA) {
             return new SesionDto.Abierta(
                     sesion.getId(),
@@ -414,12 +381,10 @@ public class ServicioSesionCaja {
                 String.valueOf(sesion.getFechaCierre()),
                 sesion.getUsuarioApertura().getNombre(),
                 sesion.getUsuarioCierre() == null ? null : sesion.getUsuarioCierre().getNombre(),
-                sesion.getBaseInicial(),
                 sesion.getEfectivoEsperado(),
                 sesion.getEfectivoContado(),
                 sesion.getDiferencia(),
                 sesion.getMontoRetirado(),
-                hayUnaSesionAbierta ? null : sesion.getBaseSiguiente(),
                 sesion.getObservaciones(),
                 notas.getOrDefault(sesion.getId(), List.of()));
     }

@@ -436,7 +436,7 @@ class MetricasHttpTest {
 
         ClienteHttpDePrueba cajera = new ClienteHttpDePrueba(puerto);
         cajera.post("/api/v1/auth/login", "{\"nombre\":\"Alejandra\",\"pin\":\"1111\"}");
-        cajera.post("/api/v1/caja/sesiones", "{\"baseInicial\":100000}");
+        cajera.post("/api/v1/caja/sesiones", "{}");
 
         // Limpia: 5 delineadores + 1 base = 110.000, en efectivo.
         cajera.post("/api/v1/ventas", venta("limpia", "EFECTIVO", null,

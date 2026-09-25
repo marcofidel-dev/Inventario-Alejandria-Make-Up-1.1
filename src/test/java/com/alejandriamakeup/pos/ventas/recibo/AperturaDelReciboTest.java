@@ -114,7 +114,7 @@ class AperturaDelReciboTest {
     }
 
     private long cobrar() {
-        duena.post("/api/v1/caja/sesiones", "{\"baseInicial\":100000}");
+        duena.post("/api/v1/caja/sesiones", "{}");
         duena.post("/api/v1/ventas",
                 "{\"uuid\":\"" + UUID.randomUUID() + "\",\"metodoPago\":\"EFECTIVO\","
                         + "\"efectivoRecibido\":100000,\"lineas\":[{\"varianteId\":" + idLabial

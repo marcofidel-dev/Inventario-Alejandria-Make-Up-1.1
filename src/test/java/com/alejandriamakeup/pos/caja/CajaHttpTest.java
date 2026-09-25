@@ -38,9 +38,10 @@ import com.alejandriamakeup.pos.usuarios.UsuarioRepository;
  * independientes entre sí — son un día de trabajo. Contra la base compartida, una
  * corrida anterior que dejara una sesión abierta rompería la siguiente.
  *
- * <p>Las cuentas del escenario: base 200.000, un ingreso de 50.000, un retiro de
- * 30.000 y un gasto de 20.000 — movimientos que suman 0 — así que el esperado es
- * 200.000. El conteo físico da 195.000 a propósito, para que la diferencia sea
+ * <p>Las cuentas del escenario: un ingreso de apertura de 200.000 (el efectivo dejado
+ * de ayer), un ingreso de 50.000, un retiro de 30.000 y un gasto de 20.000 — los tres
+ * últimos suman 0 — así que el esperado es 200.000, la suma de los movimientos y nada
+ * más. El conteo físico da 195.000 a propósito, para que la diferencia sea
  * −5.000 y no un cero que podría estar tapando un cálculo que no corre.
  */
 @SpringBootTest(classes = PosApplication.class, webEnvironment = WebEnvironment.RANDOM_PORT)
@@ -52,11 +53,11 @@ class CajaHttpTest {
     private static final Path BACKUPS = Path.of(System.getProperty("java.io.tmpdir"),
             "AlejandriaMakeUp-test-aislado", "backups-caja-" + UUID.randomUUID());
 
-    private static final long BASE_INICIAL = 200_000;
+    private static final long EFECTIVO_DE_AYER = 200_000;
+    private static final long BASE_HOSTIL = 999_000;
     private static final long ESPERADO = 200_000;
     private static final long CONTADO = 195_000;
     private static final long DIFERENCIA = -5_000;
-    private static final long BASE_SIGUIENTE = 150_000;
 
     private static Long idSesion;
 
@@ -73,6 +74,9 @@ class CajaHttpTest {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    @Autowired
+    private SesionCajaRepository sesionRepository;
+
     private ClienteHttpDePrueba duena;
     private ClienteHttpDePrueba empleada;
 
@@ -88,61 +92,62 @@ class CajaHttpTest {
         entrar(empleada, "Camila", "2222");
     }
 
+    /** La ruta de la sugerencia de base se eliminó: sin base no hay nada que sugerir. */
     @Test
     @Order(1)
-    void sinSesionesPreviasLaSugerenciaEsCero() {
+    void elEndpointDeSugerenciaDeAperturaYaNoExiste() {
         Respuesta respuesta = duena.get("/api/v1/caja/sesiones/sugerencia-apertura");
 
-        System.out.println("VERIFICACION sugerencia sin historial => " + respuesta.cuerpo());
-        assertThat(respuesta.estado()).isEqualTo(200);
-        assertThat(respuesta.cuerpo()).contains("\"baseSugerida\":0");
+        System.out.println("VERIFICACION sugerencia-apertura => " + respuesta.estado()
+                + " " + respuesta.cuerpo());
+        // Sin ruta propia, "sugerencia-apertura" cae en /sesiones/{id} y no es un id.
+        assertThat(respuesta.estado()).isEqualTo(400);
+        assertThat(respuesta.cuerpo()).contains("PARAMETRO_INVALIDO").doesNotContain("baseSugerida");
     }
 
+    /**
+     * Abrir no pide ni acepta nada. Jackson ignora lo que no conoce, así que el cliente
+     * viejo que todavía mande {@code baseInicial} no falla — y por eso la afirmación
+     * que importa no es el 201 sino que la base quedó en cero: mandarla no hace nada.
+     */
     @Test
     @Order(2)
-    void abrirSinBaseInicialEsUnError() {
-        Respuesta respuesta = duena.post("/api/v1/caja/sesiones", "{\"observaciones\":\"sin base\"}");
-
-        System.out.println("VERIFICACION abrir sin base inicial => " + respuesta.estado()
-                + " " + respuesta.cuerpo());
-        assertThat(respuesta.estado()).isEqualTo(400);
-        assertThat(respuesta.cuerpo()).contains("baseInicial");
-    }
-
-    @Test
-    @Order(3)
-    void abrirCreaLaSesion() {
+    void abrirCreaLaSesionEIgnoraUnaBaseInicialQueLleguePorSuCuenta() {
         Respuesta respuesta = duena.post("/api/v1/caja/sesiones",
-                "{\"baseInicial\":" + BASE_INICIAL + ",\"observaciones\":\"apertura del día\"}");
+                "{\"baseInicial\":" + BASE_HOSTIL + "}");
 
-        System.out.println("VERIFICACION abrir => " + respuesta.estado() + " " + respuesta.cuerpo());
+        System.out.println("VERIFICACION abrir con baseInicial hostil => " + respuesta.estado()
+                + " " + respuesta.cuerpo());
         assertThat(respuesta.estado()).isEqualTo(201);
         assertThat(respuesta.cuerpo()).contains("\"estado\":\"ABIERTA\"").contains("\"consecutivo\":\"S-");
 
         idSesion = extraerId(respuesta.cuerpo());
         assertThat(idSesion).isNotNull();
+        // La columna sigue en la tabla como vestigio, y vale 0 siempre.
+        assertThat(sesionRepository.findById(idSesion).orElseThrow().getBaseInicial()).isZero();
     }
 
     /**
-     * La fuga por la ventana. La base sugerida es exactamente el {@code baseInicial}
-     * de la sesión en curso, así que con una sesión abierta este endpoint tiene que
-     * callarse.
+     * El reemplazo de la base inicial: el efectivo que quedó de la noche anterior se
+     * declara como un INGRESO manual con concepto explícito. Es una decisión consciente
+     * de quien abre, y queda en el historial como cualquier otro ingreso.
      */
     @Test
-    @Order(4)
-    void conSesionAbiertaLaSugerenciaNoResponde() {
-        Respuesta respuesta = duena.get("/api/v1/caja/sesiones/sugerencia-apertura");
+    @Order(3)
+    void elEfectivoDejadoDeAyerSeDeclaraConUnIngresoManual() {
+        Respuesta respuesta = movimiento(duena, "INGRESO", EFECTIVO_DE_AYER,
+                "efectivo dejado de sesión anterior");
 
-        System.out.println("VERIFICACION sugerencia con sesión abierta => " + respuesta.estado()
+        System.out.println("VERIFICACION ingreso de apertura => " + respuesta.estado()
                 + " " + respuesta.cuerpo());
-        assertThat(respuesta.estado()).isEqualTo(409);
-        assertThat(respuesta.cuerpo()).doesNotContain(String.valueOf(BASE_INICIAL));
+        assertThat(respuesta.estado()).isEqualTo(201);
+        assertThat(respuesta.cuerpo()).contains("\"monto\":" + EFECTIVO_DE_AYER);
     }
 
     @Test
     @Order(5)
     void noSePuedeAbrirUnaSegundaSesion() {
-        Respuesta respuesta = duena.post("/api/v1/caja/sesiones", "{\"baseInicial\":50000}");
+        Respuesta respuesta = duena.post("/api/v1/caja/sesiones", "{}");
 
         System.out.println("VERIFICACION segunda apertura => " + respuesta.estado()
                 + " " + respuesta.cuerpo());
@@ -152,7 +157,7 @@ class CajaHttpTest {
 
     @Test
     @Order(6)
-    void laSesionAbiertaNoRevelaLaBaseNiElEsperado() {
+    void laSesionAbiertaNoRevelaElEsperado() {
         Respuesta respuesta = duena.get("/api/v1/caja/sesiones/actual");
 
         System.out.println("VERIFICACION sesión actual (ABIERTA) => " + respuesta.cuerpo());
@@ -160,7 +165,7 @@ class CajaHttpTest {
         assertThat(respuesta.cuerpo())
                 .doesNotContain("baseInicial")
                 .doesNotContain("efectivoEsperado")
-                .doesNotContain(String.valueOf(BASE_INICIAL));
+                .doesNotContain(String.valueOf(ESPERADO));
     }
 
     @Test
@@ -177,7 +182,7 @@ class CajaHttpTest {
                 .contains("\"monto\":50000")
                 .contains("\"monto\":-30000")
                 .contains("\"monto\":-20000");
-        // Una lista de movimientos nunca trae un total: sumado a la base sería el esperado.
+        // Una lista de movimientos nunca trae un total: ese total ES el esperado.
         assertThat(lista.cuerpo()).doesNotContain("total");
     }
 
@@ -223,9 +228,8 @@ class CajaHttpTest {
                            {"denominacion":20000,"cantidad":2},
                            {"denominacion":5000,"cantidad":1}],
                  "montoRetirado":45000,
-                 "baseSiguiente":%d,
                  "observaciones":"cierre del día"}
-                """.formatted(BASE_SIGUIENTE));
+                """);
 
         System.out.println("VERIFICACION cierre => " + respuesta.estado() + " " + respuesta.cuerpo());
         assertThat(respuesta.estado()).isEqualTo(200);
@@ -240,8 +244,10 @@ class CajaHttpTest {
                 .contains("\"efectivoEsperado\":" + ESPERADO)
                 .contains("\"efectivoContado\":" + CONTADO)
                 .contains("\"diferencia\":" + DIFERENCIA)
-                .contains("\"baseSiguiente\":" + BASE_SIGUIENTE)
-                .contains("\"usuarioCierre\":\"Alejandra\"");
+                .contains("\"usuarioCierre\":\"Alejandra\"")
+                // Ni base inicial ni base para mañana: esos conceptos ya no existen.
+                .doesNotContain("baseInicial")
+                .doesNotContain("baseSiguiente");
     }
 
     @Test
@@ -249,7 +255,7 @@ class CajaHttpTest {
     void unaSesionCerradaNoSeVuelveACerrar() {
         Respuesta respuesta = duena.post("/api/v1/caja/sesiones/" + idSesion + "/cierre",
                 "{\"conteo\":[{\"denominacion\":1000,\"cantidad\":1}],"
-                        + "\"montoRetirado\":0,\"baseSiguiente\":0}");
+                        + "\"montoRetirado\":0}");
 
         System.out.println("VERIFICACION segundo cierre => " + respuesta.estado()
                 + " " + respuesta.cuerpo());
@@ -278,16 +284,6 @@ class CajaHttpTest {
                 .contains("\"efectivoEsperado\":" + ESPERADO)
                 .contains("\"efectivoContado\":" + CONTADO)
                 .contains("\"diferencia\":" + DIFERENCIA);
-    }
-
-    @Test
-    @Order(15)
-    void trasElCierreLaSugerenciaProponeLaBaseSiguiente() {
-        Respuesta respuesta = duena.get("/api/v1/caja/sesiones/sugerencia-apertura");
-
-        System.out.println("VERIFICACION sugerencia tras el cierre => " + respuesta.cuerpo());
-        assertThat(respuesta.estado()).isEqualTo(200);
-        assertThat(respuesta.cuerpo()).contains("\"baseSugerida\":" + BASE_SIGUIENTE);
     }
 
     @Test

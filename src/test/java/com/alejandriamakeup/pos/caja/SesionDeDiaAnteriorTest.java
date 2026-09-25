@@ -59,6 +59,9 @@ class SesionDeDiaAnteriorTest {
     private SesionCajaRepository sesionRepository;
 
     @Autowired
+    private MovimientoCajaRepository movimientoRepository;
+
+    @Autowired
     private ServicioSesionCaja servicioSesion;
 
     private ClienteHttpDePrueba duena;
@@ -84,9 +87,20 @@ class SesionDeDiaAnteriorTest {
             deAyer.setConsecutivo("S-000999");
             deAyer.setUsuarioApertura(duenaEntidad);
             deAyer.setFechaApertura(Fechas.ahora().minusDays(1));
-            deAyer.setBaseInicial(180_000);
             deAyer.setEstado(EstadoSesionCaja.ABIERTA);
-            idSesionDeAyer = sesionRepository.save(deAyer).getId();
+            SesionCaja guardada = sesionRepository.save(deAyer);
+            idSesionDeAyer = guardada.getId();
+
+            // Lo que hay en su cajón entró como movimiento: ya no existe una base que
+            // lo aporte sin dejar rastro. Es el esperado de esta sesión: 180.000.
+            movimientoRepository.save(MovimientoCaja.builder()
+                    .sesion(guardada)
+                    .tipo(TipoMovimientoCaja.INGRESO)
+                    .monto(180_000)
+                    .concepto("efectivo dejado de sesión anterior")
+                    .usuario(duenaEntidad)
+                    .fecha(deAyer.getFechaApertura())
+                    .build());
         }
 
         duena = new ClienteHttpDePrueba(puerto);
@@ -96,7 +110,7 @@ class SesionDeDiaAnteriorTest {
     @Test
     @Order(1)
     void noSePuedeAbrirYElMensajeDiceQueEsDeUnDiaAnterior() {
-        Respuesta respuesta = duena.post("/api/v1/caja/sesiones", "{\"baseInicial\":200000}");
+        Respuesta respuesta = duena.post("/api/v1/caja/sesiones", "{}");
 
         System.out.println("VERIFICACION abrir con la caja de ayer abierta => "
                 + respuesta.estado() + " " + respuesta.cuerpo());
@@ -168,7 +182,7 @@ class SesionDeDiaAnteriorTest {
     void alCerrarlaLaFechaDeCierreEsAhoraYNoLaDeAyer() {
         Respuesta cierre = duena.post("/api/v1/caja/sesiones/" + idSesionDeAyer + "/cierre",
                 "{\"conteo\":[{\"denominacion\":50000,\"cantidad\":3}],"
-                        + "\"montoRetirado\":30000,\"baseSiguiente\":120000,"
+                        + "\"montoRetirado\":30000,"
                         + "\"observaciones\":\"quedó abierta de ayer\"}");
 
         System.out.println("VERIFICACION cierre de la sesión de ayer => " + cierre.cuerpo());
@@ -185,7 +199,7 @@ class SesionDeDiaAnteriorTest {
     @Test
     @Order(6)
     void cerradaLaDeAyerYaSePuedeAbrirLaDeHoy() {
-        Respuesta respuesta = duena.post("/api/v1/caja/sesiones", "{\"baseInicial\":120000}");
+        Respuesta respuesta = duena.post("/api/v1/caja/sesiones", "{}");
 
         System.out.println("VERIFICACION abrir tras cerrar la de ayer => " + respuesta.estado());
         assertThat(respuesta.estado()).isEqualTo(201);

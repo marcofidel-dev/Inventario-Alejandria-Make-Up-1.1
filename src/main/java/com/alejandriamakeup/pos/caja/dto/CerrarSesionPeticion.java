@@ -28,10 +28,6 @@ public record CerrarSesionPeticion(
         @PositiveOrZero(message = "El monto retirado no puede ser negativo")
         Long montoRetirado,
 
-        @NotNull(message = "La base para el día siguiente es obligatoria")
-        @PositiveOrZero(message = "La base siguiente no puede ser negativa")
-        Long baseSiguiente,
-
         @Size(max = 500, message = "Las observaciones no pueden pasar de 500 caracteres")
         String observaciones) {
 

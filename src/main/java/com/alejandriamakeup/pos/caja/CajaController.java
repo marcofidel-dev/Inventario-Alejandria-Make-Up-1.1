@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.alejandriamakeup.pos.caja.dto.AbrirSesionPeticion;
 import com.alejandriamakeup.pos.caja.dto.AnotarPeticion;
 import com.alejandriamakeup.pos.caja.dto.ArqueoDto;
 import com.alejandriamakeup.pos.caja.dto.CerrarSesionPeticion;
@@ -19,7 +18,6 @@ import com.alejandriamakeup.pos.caja.dto.MovimientoCajaDto;
 import com.alejandriamakeup.pos.caja.dto.NotaSesionCajaDto;
 import com.alejandriamakeup.pos.caja.dto.RegistrarMovimientoPeticion;
 import com.alejandriamakeup.pos.caja.dto.SesionDto;
-import com.alejandriamakeup.pos.caja.dto.SugerenciaAperturaDto;
 import com.alejandriamakeup.pos.seguridad.SesionHttp;
 import com.alejandriamakeup.pos.usuarios.Rol;
 
@@ -48,14 +46,9 @@ public class CajaController {
 
     @PostMapping("/sesiones")
     @ResponseStatus(HttpStatus.CREATED)
-    public SesionDto abrir(@Valid @RequestBody AbrirSesionPeticion peticion, HttpSession sesion) {
-        return servicioSesion.abrir(peticion.baseInicial(), peticion.observaciones(),
-                SesionHttp.usuarioIdObligatorio(sesion));
-    }
-
-    @GetMapping("/sesiones/sugerencia-apertura")
-    public SugerenciaAperturaDto sugerenciaDeApertura() {
-        return servicioSesion.sugerenciaDeApertura();
+    public SesionDto abrir(HttpSession sesion) {
+        // Sin cuerpo: no hay nada que declarar al abrir. Lo que se mande se ignora.
+        return servicioSesion.abrir(SesionHttp.usuarioIdObligatorio(sesion));
     }
 
     @GetMapping("/sesiones/actual")

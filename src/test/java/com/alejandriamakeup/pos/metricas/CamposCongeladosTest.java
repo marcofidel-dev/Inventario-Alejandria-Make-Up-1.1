@@ -115,7 +115,7 @@ class CamposCongeladosTest {
 
         ClienteHttpDePrueba duena = new ClienteHttpDePrueba(puerto);
         duena.post("/api/v1/auth/login", "{\"nombre\":\"Alejandra\",\"pin\":\"1111\"}");
-        duena.post("/api/v1/caja/sesiones", "{\"baseInicial\":100000}");
+        duena.post("/api/v1/caja/sesiones", "{}");
         duena.post("/api/v1/ventas", "{\"uuid\":\"congelado\",\"metodoPago\":\"EFECTIVO\","
                 + "\"efectivoRecibido\":100000,\"lineas\":[{\"varianteId\":" + variante.getId()
                 + ",\"cantidad\":2}]}");
