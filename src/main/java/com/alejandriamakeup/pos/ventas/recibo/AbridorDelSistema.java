@@ -43,6 +43,8 @@ public class AbridorDelSistema {
         try {
             if (esWindows()) {
                 abrirConStart(ruta);
+            } else if (esMac()) {
+                abrirConOpen(ruta);
             } else {
                 abrirConDesktop(archivo);
             }
@@ -59,6 +61,10 @@ public class AbridorDelSistema {
 
     private static boolean esWindows() {
         return System.getProperty("os.name", "").toLowerCase().contains("win");
+    }
+
+    private static boolean esMac() {
+        return System.getProperty("os.name", "").toLowerCase().contains("mac");
     }
 
     /**
@@ -84,6 +90,26 @@ public class AbridorDelSistema {
         if (proceso.exitValue() != 0) {
             String salida = new String(proceso.getInputStream().readAllBytes());
             throw new IOException("cmd /c start terminó con código " + proceso.exitValue()
+                    + ": " + salida.trim());
+        }
+    }
+
+    /**
+     * {@code open} es lo mismo que el doble clic del Finder. A diferencia de
+     * {@code Desktop.open}, esto da código de salida y permite el mismo timeout y la
+     * misma forma de log que la rama de Windows — nunca Desktop en Mac, a propósito.
+     */
+    private void abrirConOpen(String ruta) throws Exception {
+        Process proceso = new ProcessBuilder("open", ruta)
+                .redirectErrorStream(true)
+                .start();
+        if (!proceso.waitFor(5, TimeUnit.SECONDS)) {
+            proceso.destroyForcibly();
+            throw new IOException("open no terminó en 5 segundos");
+        }
+        if (proceso.exitValue() != 0) {
+            String salida = new String(proceso.getInputStream().readAllBytes());
+            throw new IOException("open terminó con código " + proceso.exitValue()
                     + ": " + salida.trim());
         }
     }
