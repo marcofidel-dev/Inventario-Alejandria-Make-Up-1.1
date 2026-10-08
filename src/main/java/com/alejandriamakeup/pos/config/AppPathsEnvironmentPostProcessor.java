@@ -32,6 +32,7 @@ public class AppPathsEnvironmentPostProcessor implements EnvironmentPostProcesso
         propiedades.put("app.paths.data", rutas.directorioDatos().toString());
         propiedades.put("app.paths.recibos", rutas.directorioRecibos().toString());
         propiedades.put("app.paths.backups", rutas.directorioBackups().toString());
+        propiedades.put("app.paths.logs", rutas.directorioLogs().toString());
 
         environment.getPropertySources().addFirst(new MapPropertySource("appPaths", propiedades));
     }
