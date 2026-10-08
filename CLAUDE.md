@@ -251,3 +251,6 @@ prueba en verde puede estar afirmando algo que se cumple por casualidad. Eso est
 automatizado en el front con `npm run guardas:romper` y `npm run test:romper`, que
 mutan el código, exigen que caiga exactamente la guarda o la prueba que dice
 cubrirlo, y restauran en `finally`.
+
+Una suite que ejecuta 0 tests está en rojo. Al cerrar una fase se corren backend y
+frontend completos.
