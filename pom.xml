@@ -13,7 +13,7 @@
 
     <groupId>com.alejandriamakeup</groupId>
     <artifactId>pos</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>pos</name>
     <description>Sistema de Inventario y POS - Alejandria MakeUp</description>
 
