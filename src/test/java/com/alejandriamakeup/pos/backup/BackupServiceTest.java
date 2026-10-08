@@ -2,6 +2,7 @@ package com.alejandriamakeup.pos.backup;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -357,5 +358,24 @@ class BackupServiceTest {
         Files.createFile(archivo);
         Files.setLastModifiedTime(archivo, FileTime.from(Instant.now().minus(antiguedad)));
         return archivo;
+    }
+
+    /**
+     * Cmd+Q, cerrar la ventana o cualquier otra señal de apagado terminan en el
+     * mismo {@code @PreDestroy}. Si el respaldo falla, el cierre de la app no se
+     * puede quedar esperando: esto prueba que {@code respaldarAlCerrar} vuelve sin
+     * lanzar y dentro del presupuesto de tiempo aunque la conexión ni siquiera se
+     * pueda abrir.
+     */
+    @Test
+    void unRespaldoQueFallaAlCerrarNoImpideElCierre(@TempDir Path directorioAislado) throws Exception {
+        DataSource falso = mock(DataSource.class);
+        when(falso.getConnection()).thenThrow(new SQLException("simulado: sin conexión al cerrar"));
+        BackupService servicioQueFalla = new BackupService(falso, directorioAislado.toString());
+
+        assertTimeout(Duration.ofSeconds(BackupService.SEGUNDOS_ESPERA_AL_CERRAR + 3),
+                servicioQueFalla::respaldarAlCerrar);
+
+        System.out.println("VERIFICACION respaldarAlCerrar con DataSource que falla => no lanzó y no se colgó");
     }
 }

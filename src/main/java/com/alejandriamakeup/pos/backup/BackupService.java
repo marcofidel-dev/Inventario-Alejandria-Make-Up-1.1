@@ -9,6 +9,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -20,6 +21,7 @@ import java.util.stream.Stream;
 
 import javax.sql.DataSource;
 
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,6 +52,7 @@ public class BackupService {
     // cambio; PoliticaDeRespaldoTest exige los números exactos.
     static final int DIAS_RETENCION = 30;
     static final int HORAS_ANTIGUEDAD_MAXIMA = 12;
+    static final int SEGUNDOS_ESPERA_AL_CERRAR = 5;
     private static final String PREFIJO = "backup_";
     private static final String SUFIJO = ".db";
     private static final String SUFIJO_TEMPORAL = ".tmp";
@@ -90,6 +93,40 @@ public class BackupService {
     @Scheduled(fixedRate = 6, initialDelay = 6, timeUnit = TimeUnit.HOURS)
     public void redAdicionalProgramada() {
         respaldarSiEsNecesario();
+    }
+
+    /**
+     * Un solo camino de respaldo al cerrar, sin importar cómo: Cmd+Q, cerrar la
+     * ventana, o cualquier otra señal de apagado terminan en el mismo shutdown hook
+     * de la JVM que Spring ya registra (lo que llama a todos los {@code @PreDestroy}
+     * antes de cerrar el contexto), así que no hace falta distinguir el camino.
+     *
+     * <p>Corre en un hilo con tiempo acotado: el negocio tiene que poder cerrar el
+     * programa aunque el disco esté lento o el respaldo falle, y un {@code @PreDestroy}
+     * que se cuelga retiene el cierre de todo lo demás. Si el respaldo falla o no
+     * alcanza a terminar, se registra en el log y el cierre sigue igual.
+     */
+    @PreDestroy
+    public void respaldarAlCerrar() {
+        Thread hilo = new Thread(() -> {
+            try {
+                ejecutar();
+            } catch (Exception e) {
+                log.error("Falló el respaldo al cerrar la aplicación", e);
+            }
+        }, "respaldo-al-cerrar");
+        hilo.setDaemon(true);
+        hilo.start();
+
+        try {
+            hilo.join(Duration.ofSeconds(SEGUNDOS_ESPERA_AL_CERRAR).toMillis());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        if (hilo.isAlive()) {
+            log.warn("El respaldo al cerrar no terminó en {}s; el cierre continúa sin esperarlo.",
+                    SEGUNDOS_ESPERA_AL_CERRAR);
+        }
     }
 
     /**
