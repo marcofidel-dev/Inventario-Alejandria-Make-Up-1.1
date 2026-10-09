@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Dev y test se quedan en consola, sin cambios. Producción empaquetada (ningún
+  perfil, o cualquiera que no sea dev/test) escribe solo a archivo: jpackage
+  lanza la app sin terminal visible, así que un console-only ahí equivale a no
+  tener ningún log.
+
+  app.paths.logs ya lo pone AppPathsEnvironmentPostProcessor antes de que el
+  logging arranque (ver AppPaths.java). El defaultValue solo cubre un contexto
+  de Spring que no pasó por ese post-processor (ver LoggingAArchivoTest).
+-->
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml" />
+
+    <springProperty name="rutaLogs" source="app.paths.logs" defaultValue="./logs" />
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${rutaLogs}/pos.log</file>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${rutaLogs}/pos.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- Mismo número que BackupService.DIAS_RETENCION, por coherencia operativa
+                 con los respaldos, no porque compartan la constante: son clases distintas. -->
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+    </appender>
+
+    <springProfile name="dev,test">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE" />
+        </root>
+    </springProfile>
+
+    <springProfile name="!dev &amp; !test">
+        <root level="INFO">
+            <appender-ref ref="FILE" />
+        </root>
+    </springProfile>
+</configuration>
