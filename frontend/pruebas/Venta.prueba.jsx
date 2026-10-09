@@ -362,12 +362,26 @@ describe('todo con teclado', () => {
     expect(within(filasDelCarrito()[0]).getByText('96.000')).toBeInTheDocument()
   })
 
-  /** Elegir dos veces el mismo producto suma, no duplica la línea. */
+  /**
+   * Elegir dos veces el mismo producto suma, no duplica la línea.
+   *
+   * <p>Entre las dos elecciones se espera a que el foco aterrice en la cantidad,
+   * igual que en "Enter en el buscador vacío lleva al método de pago" un poco más
+   * abajo. Sin eso la prueba es intermitente: el `requestAnimationFrame` que mueve
+   * el foco a la cantidad después de la primera elección puede llegar DESPUÉS de
+   * que la segunda elección ya volvió a enfocar el buscador y tecleó, y entonces
+   * ese foco tardío se lleva el Enter de la segunda elección por delante — no
+   * llega nunca al buscador, así que nunca se suma. Lo comprobé: una variante sin
+   * este `waitFor` falla so pena de 20/20 corridas aisladas, y ni esperando el
+   * estado final con `waitFor` (sin esperar el foco primero) se recupera, porque
+   * el segundo Enter se pierde del todo, no se demora.
+   */
   it('elegir dos veces el mismo producto suma uno', async () => {
     const usuario = userEvent.setup()
     await montar()
 
     await elegir(usuario, 'carmín')
+    await waitFor(() => expect(screen.getByLabelText(/^Cantidad de/)).toHaveFocus())
     await elegir(usuario, 'carmín')
 
     expect(filasDelCarrito()).toHaveLength(1)
