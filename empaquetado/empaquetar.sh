@@ -6,6 +6,9 @@ set -euo pipefail
 
 aqui="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 raiz="$(dirname "$aqui")"
+# Para poder comprobar al final que el .dmg que hay en disco es el que ACABA
+# de generar esta corrida, y no uno viejo que jpackage dejó sin tocar.
+inicio_epoch=$(date +%s)
 
 if [ -z "${JAVA_HOME:-}" ]; then
   echo "JAVA_HOME no está seteado. Este script no adivina cuál java usar:" \
@@ -44,7 +47,19 @@ fi
 # El script de npm resuelve su propio 'node' por PATH; sin anteponer
 # frontend/node ahí, falla con "env: node: No such file or directory" aunque
 # se lo invoque con ruta absoluta.
-salida_test_frontend="$(cd "$raiz/frontend" && PATH="$node_frontend:$PATH" "$npm_frontend" test 2>&1)" \
+#
+# El conteo de pruebas NO se lee del texto de la consola: vitest decide esa
+# redacción sola —ancho de terminal, color, versión del reporter— y nada de
+# eso es un contrato. Un grep contra "Tests  N passed" quedó demostrado
+# frágil (cayó con 173 pruebas pasando y exit 0 real). El reporter JSON sí es
+# un contrato: --outputFile escribe numTotalTests y numFailedTests como
+# números, y esos se leen con el propio node de frontend/node, sin parsear
+# texto con espacios.
+resultado_test_frontend="$raiz/target/frontend-test-result.json"
+rm -f "$resultado_test_frontend"
+
+salida_test_frontend="$(cd "$raiz/frontend" && PATH="$node_frontend:$PATH" "$npm_frontend" test -- \
+    --reporter=json --outputFile="$resultado_test_frontend" 2>&1)" \
     && estado_test_frontend=0 || estado_test_frontend=$?
 echo "$salida_test_frontend"
 
@@ -52,11 +67,24 @@ if [ $estado_test_frontend -ne 0 ]; then
   echo "npm test del frontend falló (exit $estado_test_frontend). No se empaqueta con la suite en rojo." >&2
   exit 1
 fi
-if ! echo "$salida_test_frontend" | grep -qE "Tests[[:space:]]+[0-9]+[[:space:]]+passed"; then
-  echo "npm test del frontend no reportó ninguna prueba pasada (0 pruebas ejecutadas). Eso es rojo," \
-       "no un pendiente, aunque el exit code haya sido 0 (p. ej. con --passWithNoTests)." >&2
+if [ ! -f "$resultado_test_frontend" ]; then
+  echo "vitest no escribió $resultado_test_frontend; no se puede verificar cuántas pruebas corrieron." >&2
   exit 1
 fi
+
+"$node_frontend/node" -e '
+const datos = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+if (datos.numTotalTests === 0) {
+  console.error("npm test del frontend no ejecutó ninguna prueba (numTotalTests=0). Eso es rojo, "
+    + "no un pendiente, aunque el exit code haya sido 0 (p. ej. con --passWithNoTests).");
+  process.exit(1);
+}
+if (datos.numFailedTests > 0) {
+  console.error(`npm test del frontend: ${datos.numFailedTests} prueba(s) fallida(s) de ${datos.numTotalTests}.`);
+  process.exit(1);
+}
+console.log(`npm test del frontend: ${datos.numTotalTests} pruebas, 0 fallos.`);
+' "$resultado_test_frontend"
 
 # jpackage en macOS exige de 1 a 3 enteros separados por punto, y el primero
 # no puede ser cero ni negativo (comprobado corriendo jpackage: rechaza tanto
@@ -121,3 +149,37 @@ cp "$raiz/target/pos.jar" "$entrada"
 "$JAVA_HOME/bin/jpackage" --type dmg --name AlejandriaMakeUp \
     --app-image "$app_image_dest/AlejandriaMakeUp.app" \
     --dest "$dmg_dest"
+
+# No se asume el nombre: jpackage en macOS normaliza la versión del .dmg —
+# "1.0.0" sale como "AlejandriaMakeUp-1.0.dmg", sin el ".0" final— y adivinar
+# esa normalización a mano es más frágil que preguntarle al filesystem.
+# $dmg_dest se vació con rm -rf arriba, antes de jpackage, así que cualquier
+# .dmg que haya ahora lo puso jpackage en esta corrida; más de uno es un bug
+# en otra parte del script, no algo para resolver eligiendo cualquiera.
+dmgs=("$dmg_dest"/*.dmg)
+if [ ! -f "${dmgs[0]:-}" ]; then
+  echo "jpackage no generó ningún .dmg en $dmg_dest." >&2
+  exit 1
+fi
+if [ "${#dmgs[@]}" -ne 1 ]; then
+  echo "Hay ${#dmgs[@]} archivos .dmg en $dmg_dest, se esperaba exactamente 1: ${dmgs[*]}" >&2
+  exit 1
+fi
+dmg_archivo="${dmgs[0]}"
+
+# rm -rf "$dmg_dest" corrió arriba, antes de jpackage: si el archivo que hay
+# ahora es anterior al inicio de ESTA corrida, jpackage no lo escribió de
+# verdad (pudo quedar de un hardlink, una corrida anterior en otro proceso, o
+# un jpackage que no sobrescribió). Un .dmg viejo pasando por nuevo es peor
+# que el script fallando.
+dmg_mtime=$(stat -f %m "$dmg_archivo")
+if [ "$dmg_mtime" -lt "$inicio_epoch" ]; then
+  echo "$dmg_archivo es anterior al inicio de esta corrida" \
+       "($(date -r "$dmg_mtime") < $(date -r "$inicio_epoch")); jpackage no lo generó de verdad." >&2
+  exit 1
+fi
+
+dmg_tamano=$(stat -f %z "$dmg_archivo")
+echo "Empaquetado listo: $dmg_archivo"
+echo "  Generado: $(date -r "$dmg_mtime")"
+echo "  Tamaño:   $dmg_tamano bytes"
