@@ -57,6 +57,12 @@ public class ReglasDeAcceso {
         // --- Respaldo --------------------------------------------------------
         requiere(HttpMethod.POST, "/api/v1/backup", Permiso.RESPALDAR);
 
+        // --- Sistema ----------------------------------------------------------
+        // Para los dos roles, sin permiso granular: lo que de verdad lo protege
+        // de un celular en la misma wifi es el chequeo de loopback dentro del
+        // controller, no esto.
+        autenticado(HttpMethod.POST, "/api/v1/sistema/apagado");
+
         // --- Caja ------------------------------------------------------------
         // Las rutas literales van antes que las de variable: se resuelve por
         // especificidad, pero declararlas en este orden lo deja explícito.

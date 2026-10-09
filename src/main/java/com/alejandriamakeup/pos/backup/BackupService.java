@@ -17,6 +17,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import javax.sql.DataSource;
@@ -76,6 +78,16 @@ public class BackupService {
      */
     private final Object cerrojo = new Object();
 
+    /**
+     * Un solo intento real de respaldo por apagado, sin importar quién lo pida
+     * primero: el botón "Cerrar programa" o el {@code @PreDestroy} de siempre.
+     * Si el botón ya corrió {@link #respaldarConTimeout()} —éxito o fallo—, el
+     * cierre real de la JVM que viene después encuentra el pestillo en
+     * {@code true} y no repite nada. Si nadie usó el botón, el
+     * {@code @PreDestroy} es quien hace el único intento, igual que siempre.
+     */
+    private final AtomicBoolean intentoDeCierreHecho = new AtomicBoolean(false);
+
     @Autowired
     public BackupService(DataSource dataSource, @Value("${app.paths.backups}") String directorioBackups,
             Environment environment) {
@@ -133,11 +145,35 @@ public class BackupService {
         if (perfilTest) {
             return;
         }
+        respaldarConTimeout();
+    }
+
+    /**
+     * El respaldo de "me estoy apagando", con tiempo acotado: el negocio tiene
+     * que poder cerrar el programa aunque el disco esté lento o el respaldo
+     * falle, así que corre en un hilo con un plazo y nunca cuelga al llamador.
+     *
+     * <p>Solo hace el intento real la primera vez que se llama tras arrancar:
+     * ver {@link #intentoDeCierreHecho}. Las llamadas siguientes devuelven
+     * {@link ResultadoRespaldo#exitoso()} sin tocar el disco otra vez — no
+     * porque el segundo intento fuera a chocar con el primero (el
+     * {@link #cerrojo} ya lo evita), sino porque ya no tiene nada que decir: el
+     * resultado que importa es el del primer intento, y repetirlo solo
+     * duplicaría el trabajo justo cuando el programa está terminando de
+     * cerrar.
+     */
+    public ResultadoRespaldo respaldarConTimeout() {
+        if (!intentoDeCierreHecho.compareAndSet(false, true)) {
+            return ResultadoRespaldo.exito();
+        }
+
+        AtomicReference<String> motivoDeFallo = new AtomicReference<>();
         Thread hilo = new Thread(() -> {
             try {
                 ejecutar();
             } catch (Exception e) {
                 log.error("Falló el respaldo al cerrar la aplicación", e);
+                motivoDeFallo.set(e.getMessage());
             }
         }, "respaldo-al-cerrar");
         hilo.setDaemon(true);
@@ -151,6 +187,22 @@ public class BackupService {
         if (hilo.isAlive()) {
             log.warn("El respaldo al cerrar no terminó en {}s; el cierre continúa sin esperarlo.",
                     SEGUNDOS_ESPERA_AL_CERRAR);
+            return ResultadoRespaldo.fallo(
+                    "El respaldo no terminó en " + SEGUNDOS_ESPERA_AL_CERRAR + " segundos.");
+        }
+        return motivoDeFallo.get() == null
+                ? ResultadoRespaldo.exito()
+                : ResultadoRespaldo.fallo(motivoDeFallo.get());
+    }
+
+    /** El resultado de un intento de respaldo al cerrar, para que quien lo pidió sepa si puede apagar tranquilo. */
+    public record ResultadoRespaldo(boolean exitoso, String motivo) {
+        public static ResultadoRespaldo exito() {
+            return new ResultadoRespaldo(true, null);
+        }
+
+        public static ResultadoRespaldo fallo(String motivo) {
+            return new ResultadoRespaldo(false, motivo);
         }
     }
 

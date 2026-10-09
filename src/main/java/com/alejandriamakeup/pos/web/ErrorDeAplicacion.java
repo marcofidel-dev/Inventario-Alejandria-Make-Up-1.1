@@ -114,4 +114,13 @@ public class ErrorDeAplicacion extends RuntimeException {
     public static ErrorDeAplicacion peticionInvalida(String mensaje) {
         return new ErrorDeAplicacion(HttpStatus.BAD_REQUEST, "PETICION_INVALIDA", mensaje, Map.of());
     }
+
+    /**
+     * La app escucha en {@code 0.0.0.0} para que el celular vea el POS por wifi,
+     * pero acciones como apagar el sistema solo se piden desde el propio equipo.
+     */
+    public static ErrorDeAplicacion accesoSoloLocal() {
+        return new ErrorDeAplicacion(HttpStatus.FORBIDDEN, "ACCESO_SOLO_LOCAL",
+                "Esta acción solo se puede pedir desde el propio equipo.", Map.of());
+    }
 }
