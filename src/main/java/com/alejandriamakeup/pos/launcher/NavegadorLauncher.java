@@ -35,7 +35,14 @@ public class NavegadorLauncher {
     private static final String RELATIVA_CHROME = "Google\\Chrome\\Application\\chrome.exe";
     private static final String RELATIVA_EDGE = "Microsoft\\Edge\\Application\\msedge.exe";
 
-    /** En ese orden: el primero instalado gana. */
+    /**
+     * En ese orden: el primero instalado gana. En las tres el binario dentro de
+     * {@code Contents/MacOS/} se llama exactamente igual que la carpeta sin
+     * {@code .app} — confirmado corriendo {@code ls} sobre
+     * {@code Google Chrome.app} en esta máquina; Edge y Brave no están
+     * instalados aquí para confirmarlo igual, pero siguen la misma convención
+     * de bundle en macOS.
+     */
     private static final List<String> APPS_MAC = List.of("Google Chrome", "Microsoft Edge", "Brave Browser");
 
     private final int puerto;
@@ -144,19 +151,31 @@ public class NavegadorLauncher {
     }
 
     /**
-     * Sin {@code -n}: probado en esta máquina que {@code open -na "Calculator"} dos
-     * veces deja dos procesos vivos (PID distinto cada vez), mientras que
-     * {@code open -a "Calculator"} reutiliza el mismo proceso. {@code -n} fuerza una
-     * instancia nueva aunque la app ya esté abierta — exactamente lo que no se
-     * quiere para un navegador, que quedaría abriendo copias cada vez que alguien
-     * cobra una venta con Chrome ya abierto de antes.
+     * NUNCA {@code open -a "<App>" --args --app=<url>}. Probado en esta máquina
+     * con Chrome ya abierto (con ventanas previas): {@code open} descarta
+     * {@code --args} por completo cuando la app ya está corriendo, así que
+     * Chrome solo pasa al frente con sus ventanas de siempre —nunca abre la
+     * ventana en modo app— y sin embargo el proceso {@code open} termina con
+     * éxito, así que {@link #lanzar} lo daría por bueno y el log diría
+     * "Navegador abierto en modo app" mintiendo. Por eso se lanza el binario
+     * del bundle directo, sin pasar por {@code open}: así sí abre una ventana
+     * nueva en modo app aunque la app ya tenga ventanas abiertas, que es
+     * justamente el caso de uso real —alguien que ya tenía Chrome abierto para
+     * otra cosa y ahora prende el POS—.
+     *
+     * <p>Si algún día alguien "simplifica" esto de vuelta a {@code open -a}:
+     * {@code NavegadorLauncherTest} falla, porque el comando esperado ya no
+     * empieza con {@code open}.
      */
     private static List<List<String>> candidatosMac(String url, String home, Predicate<Path> existe) {
         List<List<String>> candidatos = new ArrayList<>();
         for (String app : APPS_MAC) {
-            if (existe.test(Path.of("/Applications", app + ".app"))
-                    || existe.test(Path.of(home, "Applications", app + ".app"))) {
-                candidatos.add(List.of("open", "-a", app, "--args", "--app=" + url));
+            Path enSistema = Path.of("/Applications", app + ".app");
+            Path enUsuario = Path.of(home, "Applications", app + ".app");
+            Path bundle = existe.test(enSistema) ? enSistema : existe.test(enUsuario) ? enUsuario : null;
+            if (bundle != null) {
+                String binario = bundle.resolve("Contents/MacOS").resolve(app).toString();
+                candidatos.add(List.of(binario, "--app=" + url));
             }
         }
         return candidatos;

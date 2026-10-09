@@ -41,6 +41,14 @@ class NavegadorLauncherTest {
         assertThat(candidatos).isEmpty();
     }
 
+    /**
+     * NUNCA {@code open -a "<App>" --args ...}: con la app ya abierta, {@code open}
+     * descarta {@code --args} y solo trae las ventanas existentes al frente — nunca
+     * abre en modo app — y aun así termina con éxito, así que el launcher lo daría
+     * por bueno en silencio. Si alguien "simplifica" {@code candidatosMac} de vuelta
+     * a {@code open -a}, esta aserción falla porque el comando ya no empieza con
+     * {@code open}.
+     */
     @Test
     void macConSoloBraveInstaladoUsaBrave() {
         Path brave = Path.of("/Applications/Brave Browser.app");
@@ -50,8 +58,8 @@ class NavegadorLauncherTest {
                 nombre -> null, instalados::contains);
 
         System.out.println("VERIFICACION mac brave => " + candidatos);
-        assertThat(candidatos)
-                .containsExactly(List.of("open", "-a", "Brave Browser", "--args", "--app=" + URL));
+        assertThat(candidatos).containsExactly(List.of(
+                "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser", "--app=" + URL));
     }
 
     @Test
@@ -64,7 +72,8 @@ class NavegadorLauncherTest {
                 nombre -> null, instalados::contains);
 
         System.out.println("VERIFICACION mac chrome+edge => " + candidatos);
-        assertThat(candidatos.get(0)).containsExactly("open", "-a", "Google Chrome", "--args", "--app=" + URL);
+        assertThat(candidatos.get(0)).containsExactly(
+                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "--app=" + URL);
         assertThat(candidatos).hasSize(2);
     }
 
@@ -77,7 +86,8 @@ class NavegadorLauncherTest {
                 nombre -> null, instalados::contains);
 
         System.out.println("VERIFICACION mac ~/Applications => " + candidatos);
-        assertThat(candidatos).containsExactly(List.of("open", "-a", "Google Chrome", "--args", "--app=" + URL));
+        assertThat(candidatos).containsExactly(List.of(
+                "/Users/alguien/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "--app=" + URL));
     }
 
     @Test
