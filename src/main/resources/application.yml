@@ -25,6 +25,11 @@ server:
   port: 8080
 
 app:
+  nombre: AlejandriaMakeUp
+  # Filtrado por Maven (ver pom.xml) con delimitador @...@, no ${...}: este
+  # archivo ya usa ${...} para los suyos (p. ej. ${APP_DB_PATH}) y mezclar los
+  # dos delimitadores se los comería en el build.
+  version: '@project.version@'
   launcher:
     enabled: true
 

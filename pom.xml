@@ -89,7 +89,37 @@
 
     <build>
         <finalName>pos</finalName>
+        <!-- Solo application.yml se filtra, y solo para app.version: @...@ y no
+             ${...}, porque application.yml ya usa ${...} para los suyos propios
+             (${APP_DB_PATH}) y el filtrado de Maven se los comería en el build. -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>application.yml</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>application.yml</exclude>
+                </excludes>
+            </resource>
+        </resources>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <configuration>
+                    <useDefaultDelimiters>false</useDefaultDelimiters>
+                    <delimiters>
+                        <delimiter>@</delimiter>
+                    </delimiters>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
