@@ -26,6 +26,38 @@ fi
 
 mvn -f "$raiz/pom.xml" package
 
+# npm run build (parte de `mvn package`, arriba) nunca corre vitest: solo
+# corre las guardas y vite build. Por eso una suite de frontend en rojo —o
+# completamente rota, 0 pruebas ejecutadas— no frena el build de Maven. Se
+# corre aparte, aquí, y si no hay un conteo real de pruebas pasadas se trata
+# igual que un fallo: 0 pruebas ejecutadas no es un pendiente, es rojo.
+#
+# Con el npm del propio frontend/node/, no uno de sistema: a diferencia de
+# Maven, el Node/npm del frontend ya está versionado por el pom
+# (frontend-maven-plugin) y "mvn package" (arriba) ya lo instaló ahí mismo.
+node_frontend="$raiz/frontend/node"
+npm_frontend="$node_frontend/npm"
+if [ ! -x "$npm_frontend" ]; then
+  echo "No se encontró $npm_frontend. ¿Corrió 'mvn package' de verdad arriba?" >&2
+  exit 1
+fi
+# El script de npm resuelve su propio 'node' por PATH; sin anteponer
+# frontend/node ahí, falla con "env: node: No such file or directory" aunque
+# se lo invoque con ruta absoluta.
+salida_test_frontend="$(cd "$raiz/frontend" && PATH="$node_frontend:$PATH" "$npm_frontend" test 2>&1)" \
+    && estado_test_frontend=0 || estado_test_frontend=$?
+echo "$salida_test_frontend"
+
+if [ $estado_test_frontend -ne 0 ]; then
+  echo "npm test del frontend falló (exit $estado_test_frontend). No se empaqueta con la suite en rojo." >&2
+  exit 1
+fi
+if ! echo "$salida_test_frontend" | grep -qE "Tests[[:space:]]+[0-9]+[[:space:]]+passed"; then
+  echo "npm test del frontend no reportó ninguna prueba pasada (0 pruebas ejecutadas). Eso es rojo," \
+       "no un pendiente, aunque el exit code haya sido 0 (p. ej. con --passWithNoTests)." >&2
+  exit 1
+fi
+
 # jpackage en macOS exige de 1 a 3 enteros separados por punto, y el primero
 # no puede ser cero ni negativo (comprobado corriendo jpackage: rechaza tanto
 # "-SNAPSHOT" como "0.0.1"). Se deriva del pom en vez de escribirla a mano
