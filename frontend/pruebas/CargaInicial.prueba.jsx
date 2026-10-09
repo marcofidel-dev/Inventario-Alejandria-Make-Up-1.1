@@ -19,6 +19,11 @@ async function montar(respuestaDeCarga) {
   vi.stubGlobal('fetch', espia)
   render(<Pantalla />)
   await screen.findByRole('heading', { name: 'Carga inicial de existencias' })
+  // El encabezado es JSX estático: aparece en el primer render, antes de que el
+  // catálogo termine de llegar. Sin esto, `llenarLinea` puede intentar elegir una
+  // variante cuando el <select> todavía solo tiene la opción "Elegir variante…" —
+  // intermitente, no reproducible fuera de la suite completa.
+  await screen.findByRole('option', { name: /Rojo carmín/ })
   return espia
 }
 
@@ -97,6 +102,7 @@ describe('Carga inicial', () => {
     vi.stubGlobal('fetch', espia)
     render(<Pantalla />)
     await screen.findByRole('heading', { name: 'Carga inicial de existencias' })
+    await screen.findByRole('option', { name: /Rojo carmín/ })
 
     await llenarLinea(usuario, 1, { varianteId: '1000', cantidad: '5', costo: '9000' })
 
