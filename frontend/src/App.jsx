@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { AvisoDeError } from './componentes/Aviso.jsx'
+import { Aviso, AvisoDeError } from './componentes/Aviso.jsx'
 import { Logo } from './componentes/Logo.jsx'
 import { useCatalogo } from './catalogo/useCatalogo.js'
 import { useCompras } from './compras/useCompras.js'
@@ -30,6 +30,24 @@ import { useSesion } from './sesion/SesionContext.jsx'
 export default function App() {
   const { usuario, cargando, falloDeArranque, requiereConfiguracionInicial, entrar,
           reintentarArranque } = useSesion()
+  const [apagado, setApagado] = useState(false)
+
+  // Antes que cualquier otra cosa, incluso que "cargando": una vez que el
+  // backend dijo que el respaldo salió bien y programó el apagado, no hay
+  // nada más que esta pantalla pueda ofrecer. El servidor todavía no se
+  // apagó —lo hace unos milisegundos después, ya con la respuesta afuera—
+  // pero decirlo ahora es lo que cumple "se cerró, puedes cerrar la ventana"
+  // antes de que de verdad pase.
+  if (apagado) {
+    return (
+      <main className="login">
+        <div className="login__caja">
+          <h1 className="login__titulo"><Logo /></h1>
+          <Aviso tipo="exito" titulo="El programa se cerró">Puedes cerrar esta ventana.</Aviso>
+        </div>
+      </main>
+    )
+  }
 
   if (cargando) {
     return <main className="login"><div className="login__caja">Abriendo…</div></main>
@@ -57,13 +75,13 @@ export default function App() {
     return <Login alEntrar={entrar} />
   }
 
-  return <Sesion />
+  return <Sesion alCerrarPrograma={() => setApagado(true)} />
 }
 
 /** La vista con la que abre la aplicacion: la lista de productos. */
 const VISTA_INICIAL = { seccion: 'inventario', pestana: 'productos' }
 
-function Sesion() {
+function Sesion({ alCerrarPrograma }) {
   const { puede } = useSesion()
   const [vista, setVista] = useState(VISTA_INICIAL)
   const catalogo = useCatalogo()
@@ -79,7 +97,7 @@ function Sesion() {
   const vistaEfectiva = seccion && (!seccion.pestanas || pestana) ? vista : VISTA_INICIAL
 
   return (
-    <Armazon vista={vistaEfectiva} alCambiarVista={setVista}>
+    <Armazon vista={vistaEfectiva} alCambiarVista={setVista} alCerrarPrograma={alCerrarPrograma}>
       <Contenido vista={vistaEfectiva} catalogo={catalogo} compras={compras}
                  alIrA={setVista} />
     </Armazon>

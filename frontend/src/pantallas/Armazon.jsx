@@ -4,6 +4,7 @@ import { Boton } from '../componentes/Boton.jsx'
 import { Logo } from '../componentes/Logo.jsx'
 import { etiqueta } from '../etiquetas.js'
 import { PERMISOS, useSesion } from '../sesion/SesionContext.jsx'
+import { BotonCerrarPrograma } from './CerrarPrograma.jsx'
 
 /**
  * El armazon: encabezado de identidad, navegacion lateral con pestañas y area de
@@ -120,7 +121,7 @@ export function pestanaInicialDe(seccion) {
   return (disponible ?? seccion.pestanas[0]).id
 }
 
-export function Armazon({ vista, alCambiarVista, children }) {
+export function Armazon({ vista, alCambiarVista, children, alCerrarPrograma }) {
   const { usuario, puede, salir } = useSesion()
   const visibles = seccionesVisibles(puede)
   const seccionActual = visibles.find((seccion) => seccion.id === vista.seccion)
@@ -135,6 +136,7 @@ export function Armazon({ vista, alCambiarVista, children }) {
         <div className="encabezado__usuario">
           <span>{usuario.nombre}</span>
           <span className="insignia insignia--neutra">{etiqueta(usuario.rol)}</span>
+          <BotonCerrarPrograma alApagado={alCerrarPrograma} />
           <Boton variante="plano" icono={LogOut} onClick={salir}>Salir</Boton>
         </div>
       </header>

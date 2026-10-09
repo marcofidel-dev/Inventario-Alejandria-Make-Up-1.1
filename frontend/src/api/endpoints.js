@@ -173,3 +173,7 @@ export const metricas = {
   vencimientos: () => api.get('/api/v1/metricas/vencimientos'),
   sinRotacion: (dias) => api.get(`/api/v1/metricas/sin-rotacion?dias=${dias}`),
 }
+
+export const sistema = {
+  apagar: (forzar = false) => api.post('/api/v1/sistema/apagado', { forzar }),
+}
