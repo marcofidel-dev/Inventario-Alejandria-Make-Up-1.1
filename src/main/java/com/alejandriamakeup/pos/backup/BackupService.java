@@ -24,9 +24,13 @@ import javax.sql.DataSource;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
+import org.springframework.core.env.StandardEnvironment;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -59,6 +63,7 @@ public class BackupService {
 
     private final DataSource dataSource;
     private final Path directorioBackups;
+    private final boolean perfilTest;
 
     /**
      * Dos respaldos simultáneos apuntan al mismo {@code .tmp}, y
@@ -71,9 +76,18 @@ public class BackupService {
      */
     private final Object cerrojo = new Object();
 
-    public BackupService(DataSource dataSource, @Value("${app.paths.backups}") String directorioBackups) {
+    @Autowired
+    public BackupService(DataSource dataSource, @Value("${app.paths.backups}") String directorioBackups,
+            Environment environment) {
         this.dataSource = dataSource;
         this.directorioBackups = Path.of(directorioBackups);
+        this.perfilTest = environment.acceptsProfiles(Profiles.of("test"));
+    }
+
+    /** Para los tests que construyen su propia instancia aislada y no les importa el
+     *  perfil: se comporta como en producción (perfilTest=false). */
+    BackupService(DataSource dataSource, String directorioBackups) {
+        this(dataSource, directorioBackups, new StandardEnvironment());
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -105,9 +119,20 @@ public class BackupService {
      * programa aunque el disco esté lento o el respaldo falle, y un {@code @PreDestroy}
      * que se cuelga retiene el cierre de todo lo demás. Si el respaldo falla o no
      * alcanza a terminar, se registra en el log y el cierre sigue igual.
+     *
+     * <p><strong>No hace nada bajo el perfil {@code test}.</strong> Spring destruye un
+     * contexto de test cacheado exactamente igual que uno real —este mismo
+     * {@code @PreDestroy} corre— y una suite con muchos {@code @SpringBootTest} con
+     * propiedades distintas crea y evita muchos contextos por corrida. Sin este
+     * guard, una corrida completa disparaba de sobra este respaldo contra un
+     * directorio de pruebas compartido y sin aislar (confirmado: 12 disparos reales
+     * en una sola corrida de {@code mvn test}).
      */
     @PreDestroy
     public void respaldarAlCerrar() {
+        if (perfilTest) {
+            return;
+        }
         Thread hilo = new Thread(() -> {
             try {
                 ejecutar();

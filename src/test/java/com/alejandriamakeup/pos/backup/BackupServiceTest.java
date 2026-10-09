@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
@@ -36,6 +37,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.mock.env.MockEnvironment;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.alejandriamakeup.pos.PosApplication;
@@ -377,5 +379,25 @@ class BackupServiceTest {
                 servicioQueFalla::respaldarAlCerrar);
 
         System.out.println("VERIFICACION respaldarAlCerrar con DataSource que falla => no lanzó y no se colgó");
+    }
+
+    /**
+     * Bajo el perfil {@code test}, {@code respaldarAlCerrar} no hace nada: ni
+     * siquiera toca el {@link DataSource}. Spring destruye un contexto de test
+     * cacheado igual que uno real, y una suite con muchos contextos distintos
+     * dispararía este respaldo de sobra contra un directorio compartido sin aislar.
+     */
+    @Test
+    void respaldarAlCerrarNoHaceNadaBajoElPerfilTest(@TempDir Path directorioAislado) {
+        MockEnvironment entornoDePrueba = new MockEnvironment();
+        entornoDePrueba.addActiveProfile("test");
+        DataSource dataSourceQueNoDeberiaTocarse = mock(DataSource.class);
+        BackupService servicioEnPerfilTest = new BackupService(
+                dataSourceQueNoDeberiaTocarse, directorioAislado.toString(), entornoDePrueba);
+
+        assertTimeout(Duration.ofSeconds(1), servicioEnPerfilTest::respaldarAlCerrar);
+
+        verifyNoInteractions(dataSourceQueNoDeberiaTocarse);
+        System.out.println("VERIFICACION respaldarAlCerrar bajo perfil test => no tocó el DataSource");
     }
 }
